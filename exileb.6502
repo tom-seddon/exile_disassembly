@@ -1,0 +1,2 @@
+SRAM=0
+include "exile.6502"
