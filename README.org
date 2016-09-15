@@ -20,6 +20,12 @@ With BeebAsm on OS X, just type =make=...
 The output will appear in a folder called =./tmp= in your working
 copy.
 
+The build process can check that the build results match the BBC
+originals exactly. To this, extract =$.EXILEB= and =$.EXILEMC= from
+the STH Exile disc and save them in the working copy as =exileb.orig=
+and =exilemc.orig= respectively. The build will then fail if there's a
+mismatch, and you'll get a hex dump diff.
+
 Haven't tried Linux or Windows but it shouldn't be too much effort to
 get it working...
 
