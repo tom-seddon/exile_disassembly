@@ -46,3 +46,13 @@ get it working...
   mess of the layout the process also put some comment blocks in the
   wrong places. Maybe one day I'll go through and put them back where
   they should be.
+
+* Tools
+
+** =$.EXSPRS2=
+
+BBC BASIC program that draws the Exile sprites on screen. You'll need
+=$.EXILEB= from the Exile disc, and 16+K free in Mode 129 - so it's
+B+/B+128/M128/Tube only I'm afraid.
+
+=exile_sprites.png= is the output.
