@@ -1,3 +1,4 @@
+; -*- indent-tabs-mode:nil; -*-
 ; these values aren't tweakable yet...
 load_address=$1200
 base_address=$100
@@ -3139,17 +3140,21 @@ num_keys=39
 
 IF SRAM
 .M129B
-    bit $fe6d
-    bvc M12B8
-    lda #0
-    lsr S9A42
-    ror a
-    sta $fe64
-    lda S9A42
+    bit $fe6d			; test user VIA IFR
+    bvc M12B8			; branch taken if not T1 interrupt
+
+; set T1 to smp_next_delay<<7. 
+
+    lda #0			; 
+    lsr smp_next_delay		; C = smp_next_delay bit 0
+    ror a			; LO(smp_next_delay<<7)
+    sta $fe64			
+    lda smp_next_delay		; HI(smp_next_delay<<7) 
     sta $fe65
-    lda S9A43
-    jsr push_sound_to_chip
-    jsr S9A49
+    lda smp_next_volume_cmd	; get next value to write - either
+				; silence or appropriate volume command
+    jsr push_sound_to_chip	; do it
+    jsr smp_next_byte		; prepare next byte
 .M12B8
 ENDIF
 .L12A3
@@ -3356,6 +3361,7 @@ ENDIF
     LSR A
     BCC L13F4
     RTS
+    
 .play_sound2
     SEC
     equb $24; BIT &xx            BIT &18 ; wall_collision_bottom_minus_top
@@ -5963,8 +5969,8 @@ IF SRAM
     jsr increment_timers
     and #3
     tax
-    inx
-    jsr S99EC
+    inx				; 1,2,3,4 - various sounds of pain
+    jsr smp_play
 ELSE
     JSR play_sound
     equb $33,$03,$2D,$24; sound data
@@ -9776,117 +9782,185 @@ org $99ec
 ENDIF
 
 IF SRAM
-.S99EC
+
+; X = sound to play
+.smp_play
     PHP 
     TYA 
     PHA 
-    CPX M9A48
-    BCS M3EC7
+    CPX smp_current_sound	; compare to existing sound being
+				; played, if any
+    BCS M3EC7			; branch taken if new sound id is g/e
+				; (so I guess sound ID encodes
+				; priority too...)
     JSR get_object_distance_from_screen_centre
     CMP #$20
-    BCS M3EC7
-    LSR A
-    ORA #$90
-    STA M9A46
-    STX M9A48
+    BCS M3EC7			; cull by distance - branch taken if
+				; object is too far away
+    LSR A			; scale to 0-15 to get volume - 0
+				; (near)=max, 15 (far)=silence
+    ORA #$90			; mask in sound chip command: set tone
+				; 3 volume
+    STA smp_default_volume_cmd	; save this
+    STX smp_current_sound	; save playing sound id
     TXA 
-    ASL A
-    TAX 
-    SEI 
+    ASL A			; sound id * 2
+    TAX 			; X = sound id * 2
+    SEI
+
+;; book channel 3 for the sample playback
+
     LDA #$02
     STA sound_max_channels
     LDA #$00
     STA sound_duration_low+3
+
+;; get address of sample data and pop it in M3EE4. (TOC is 7 words at
+;; $8100.)
+
     CLC 
     LDA $8100,X
     ADC #$00
-    STA M3EE4+1
+    STA smp_prepare_byte+1
     LDA $8101,X
     ADC #$81
-    STA M3EE4+2
-    LDA #$C0
-    STA $FE6E
-    LDA #$81
+    STA smp_prepare_byte+2
+
+;; set up user VIA
+
+    LDA #%11000000		; enable T1
+    STA $FE6E			; enable user VIA T1
+
+;; a frequency of 1 sets the chip constantly outputting +1 on that
+;; channel - the volume is then be tweaked to get the desired
+;; waveform. It's only 1 byte to change the volume.
+
+    LDA #$81			; tone 3 frequency = xxxxxx001
     JSR push_sound_to_chip
-    LDA #$00
+    LDA #$00			; tone 3 frequency = 000000001
     JSR push_sound_to_chip
+
+;; set T1 to $0001 to get an IRQ just after the PHP below.
+
     LDX #$01
     STX $FE64
     DEX 
     STX $FE65
-    JSR M3EE4
+    JSR smp_prepare_byte			; get first sample data byte
  .M3EC7
     PLA
     TAY
     PLP
     RTS
 
-.S9A42
-.M9A42
+.smp_next_delay
     equb $00
-.S9A43
-.M9A43
+
+;; Volume command to set on next T1 IRQ
+.smp_next_volume_cmd
     equb $00
-.M9A44
+
+;; Last byte retrieved from the sample data
+.smp_byte
     equb $00
-.M9A45
+
+;; If bit 7 is set, the high nybble of smp_byte has been processed (N
+;; samples of silence) and the low nybble (N samples of noise) needs
+;; doing. Otherwise, fetch a new byte.
+.smp_do_low_nybble
     equb $00
-.M9A46
+
+;; Default volume command to use, based on object distance
+.smp_default_volume_cmd
     equb $00
+
+;; Seemingly unused
 .M9A47
     equb $00
-.M9A48
+
+;; Current sound being played, or $ff for none
+.smp_current_sound
     equb $ff
 
-.S9A49
+
+;; Sample data format is a series of bytes, arranged as two nybbles
+;; each, encoding a ~7812Hz sample.
+;;
+;; If the byte is 0, that's the end of the data.
+;;
+;; If the low nybble is 15, the entire byte encodes 15-255 samples of
+;; silence.
+;;
+;; Otherwise, the high nybble encodes the number of samples of
+;; silence, and the low nybble encodes the number of samples of
+;; non-silence.
+
+.smp_next_byte
     BIT game_paused
-    BPL M3EE4
-    BIT M9A45
-    BMI M3F04
-    INC M3EE4+1
-    BNE M3EE4
-    INC M3EE4+2
-.M3EE4
-    LDA $8100			; fixed up above
-    BEQ M3F1D
-    STA M9A44
-    AND #$0F
+    BPL smp_prepare_byte	; taken if game paused
+    BIT smp_do_low_nybble		; do next nybble, or advance to next byte
+    BMI smp_low_nybble			; branch taken if doing next nybble
+    
+;; fetch next byte of data with preincrement
+
+    INC smp_prepare_byte+1
+    BNE smp_prepare_byte
+    INC smp_prepare_byte+2
+.smp_prepare_byte LDA $8100	; filled in with actual address of next byte
+
+    BEQ smp_playback_done	; if data byte was 0, sample is done
+    STA smp_byte		; save data byte
+    AND #$0F			; get low nybble
     CMP #$0F
-    LDA M9A44
-    BCS M3EFF
-    LSR A
-    LSR A
-    LSR A
-    LSR A
-    BEQ M3F04
+    LDA smp_byte		; get data byte
+    BCS smp_silence		; taken if low nybble 15 - it's
+				; silence, and entire data byte is the
+				; delay
+
+;; get high nybble
+
+    LSR A			; >>1
+    LSR A			; >>2
+    LSR A			; >>3
+    LSR A			; >>4
+    BEQ smp_low_nybble		; taken if high nybble is 0
+
+;; (data&15)<15&&(data&0xf0)!=0
+
     SEC 
-    ROR M9A45
-.M3EFF
-    LDY #$9F
-    JMP M3F0F
-.M3F04
-    LDA M9A44
-    AND #$0F
-    LSR M9A45
-    LDY M9A46
+    ROR smp_do_low_nybble	; do low nybble next time
+    
+.smp_silence
+    LDY #$9F			; silence (tone 3 volume = %1111)
+    JMP M3F0F			; tut... why not BNE?
+    
+.smp_low_nybble
+    LDA smp_byte		; get data byte
+    AND #$0F			; get bottom 4 bits
+    LSR smp_do_low_nybble	; fetch a new byte next time
+    LDY smp_default_volume_cmd	; get volume command to use
 .M3F0F
-    STA M9A42
-    BIT volume
-    BMI M3F19
-    LDY #$9F
+    STA smp_next_delay		; 
+    BIT volume			; sound on?
+    BMI M3F19			; taken if so
+    LDY #$9F			; volume command = silence
 .M3F19
-    STY M9A43
-    RTS 
-.M3F1D
-    LDA #$7F
-    STA $FE6E
+    STY smp_next_volume_cmd	; save volume command
+    RTS
+    
+.smp_playback_done
+    LDA #$7F			; disable all user VIA interrupts
+    STA $FE6E			; disable all user VIA interrupts
+
+;; back to 3 channels again
+
     LDA #$00
     STA sound_duration+3
     STA sound_duration_low+3
     LDA #$03
     STA sound_max_channels
     LDA #$FF
-    STA M9A48
+    STA smp_current_sound
     RTS 
 
 ENDIF
@@ -11540,8 +11614,8 @@ ENDIF
     LSR A
     BNE L4815 ; once every &80 cycles
 IF SRAM
-    ldx #6
-    jsr S99EC
+    ldx #6			; ALIEN DIE
+    jsr smp_play
 ELSE
     JSR play_sound                                  ; make a noise
     equb $33,$F3,$63,$E3; sound data
@@ -11586,8 +11660,8 @@ ENDIF
     LSR A
     BNE L485F
 IF SRAM
-    ldx #5
-    jsr S99EC
+    ldx #5			; DESTROY
+    jsr smp_play
 ELSE
     JSR play_sound
     equb $17,$03,$68,$A3; sound data
@@ -11845,8 +11919,8 @@ IF SRAM
     beq M4B4F
     inc M4B41+1
     bne M4B4F
-    ldx #0
-    jsr S99EC
+    ldx #0			; welcome to the land of the exile
+    jsr smp_play
 .M4B4F
 ENDIF
     LDA this_object_x

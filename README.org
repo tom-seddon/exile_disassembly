@@ -51,8 +51,19 @@ get it working...
 
 ** =$.EXSPRS2=
 
+Dependencies: shadow RAM/Tube (Tube recommended!)
+
 BBC BASIC program that draws the Exile sprites on screen. You'll need
-=$.EXILEB= from the Exile disc, and 16+K free in Mode 129 - so it's
-B+/B+128/M128/Tube only I'm afraid.
+=$.EXILEB= from the Exile disc. 
 
 =exile_sprites.png= is the output.
+
+** =samples.py=
+
+Dependencies: Python 2.7, sox
+
+Python program that extracts the sample data from the enhanced version
+and saves them as WAV files. Run from the tools folder; it expects to
+find =$.EXILESR= as =exilesr.orig= in the root of the working copy.
+
+=0.wav= to =6.wav= is the output.
