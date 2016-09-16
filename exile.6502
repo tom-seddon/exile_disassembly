@@ -48,8 +48,8 @@ held_object_y_low=&0C
 held_object_y=&0D
 this_object_target_object=&0E
 f3_xy=&0F
-f2_xy=&10			; also used in plotting
-this_object_extra=&11		; also used in plotting
+f2_xy=&10                       ; also used in plotting
+this_object_extra=&11           ; also used in plotting
 this_object_timer=&12
 this_object_timer_old=&13
 this_object_tx=&14
@@ -64,9 +64,9 @@ wall_collision_angle=&1C
 wall_collision_frict_y_vel=&1D
 wall_collision_post_angle=&1E
 underwater=&1F
-this_object_water_level=&20	; also used in plotting
+this_object_water_level=&20     ; also used in plotting
 npc_fed=&21
-npc_type=&22			; also used in plotting
+npc_type=&22                    ; also used in plotting
 used_in_sound=&23
 object_static=&24
 bells_to_sound=&25
@@ -282,18 +282,18 @@ ENDIF
     LDX #num_keys-1
     STX key_number
 .L01AC
-    LDX key_number		; index 
-    LDA keys_pressed,X		; bit 7 = pressed now
-    BPL not_pressed		; taken if not pressed now
-    CMP #%11000000		; C set if held; C clear if newly
-				; pressed
-    LDA function_table_h,X	; get routine pointer MSB (plus
-				; flag... see table)
-    ROR A			; put held flag into bit 7; put table
-				; flag into C
-    BPL L01BF			; branch taken if newly pressed
-    BCS not_pressed		; if held, and table flag set, skip it
-    AND #$7F			; clear out bit 7
+    LDX key_number              ; index 
+    LDA keys_pressed,X          ; bit 7 = pressed now
+    BPL not_pressed             ; taken if not pressed now
+    CMP #%11000000              ; C set if held; C clear if newly
+                                ; pressed
+    LDA function_table_h,X      ; get routine pointer MSB (plus
+                                ; flag... see table)
+    ROR A                       ; put held flag into bit 7; put table
+                                ; flag into C
+    BPL L01BF                   ; branch taken if newly pressed
+    BCS not_pressed             ; if held, and table flag set, skip it
+    AND #$7F                    ; clear out bit 7
 .L01BF
     JSR call_function
 .not_pressed
@@ -954,22 +954,22 @@ ENDIF
 .sprite_and
     equb $FF
 .palette_value_to_pixel_lookup
-equb $CA			; yellow bg, black bg
-equb $C9			; green bg, red bg
-equb $E3			; magenta bg, red bg
-equb $E9			; cyan bg, red bg
-equb $EB			; white bg, red bg
-equb $CE			; yellow bg, green bg
-equb $F8			; cyan bg, blue bg
-equb $E6			; magenta bg, green bg
-equb $CC			; green bg, green bg
-equb $EE			; white bg, green bg
-equb $30			; blue fg, blue fg
-equb $DE			; yellow bg, cyan bg
-equb $EF			; white bg, yellow bg
-equb $CB			; yellow bg, red bg
-equb $FB			; white bg, magenta bg
-equb $FE			; white bg, cyan bg
+equb $CA                        ; yellow bg, black bg
+equb $C9                        ; green bg, red bg
+equb $E3                        ; magenta bg, red bg
+equb $E9                        ; cyan bg, red bg
+equb $EB                        ; white bg, red bg
+equb $CE                        ; yellow bg, green bg
+equb $F8                        ; cyan bg, blue bg
+equb $E6                        ; magenta bg, green bg
+equb $CC                        ; green bg, green bg
+equb $EE                        ; white bg, green bg
+equb $30                        ; blue fg, blue fg
+equb $DE                        ; yellow bg, cyan bg
+equb $EF                        ; white bg, yellow bg
+equb $CB                        ; yellow bg, red bg
+equb $FB                        ; white bg, magenta bg
+equb $FE                        ; white bg, cyan bg
         
 .plot_sprite_screen_location_offsets_low
     equb $00
@@ -1670,18 +1670,18 @@ LDA #rcd_type
 {
 SEC
 LDX object_being_fired
-BMI L0BE7	  ; if no control has been fired, leave with carry set
+BMI L0BE7         ; if no control has been fired, leave with carry set
 EOR object_stack_type,X
 BNE L0BE7     ; if not the control we care about, leave with carry set
 LDA #$18
-JSR is_object_close_enough	; is the object close enough?
-BCS L0BE7			; if not, leave with carry set
-JSR get_angle_between_objects	; get angle
-SBC firing_angle		; minus firing_angle
-SBC #$80			; minus 180 degrees
+JSR is_object_close_enough      ; is the object close enough?
+BCS L0BE7                       ; if not, leave with carry set
+JSR get_angle_between_objects   ; get angle
+SBC firing_angle                ; minus firing_angle
+SBC #$80                        ; minus 180 degrees
 JSR make_positive
-ADC distance_OR_wall_sprite_4	; distance
-CMP #$18			; clear if object has been hit
+ADC distance_OR_wall_sprite_4   ; distance
+CMP #$18                        ; clear if object has been hit
 .L0BE7
 RTS
 }
@@ -1699,11 +1699,11 @@ RTS
 {
 BIT consider_secondary_stack_objects
 BMI push_near_objects_from_secondary_to_primary_stack
-JSR get_biggest_velocity	; for the player
+JSR get_biggest_velocity        ; for the player
 LSR A
 LSR A
 ADC secondary_stack_player_odometer ; keep track of how far the player
-				    ; has moved
+                                    ; has moved
 STA secondary_stack_player_odometer
 BCS push_near_objects_from_secondary_to_primary_stack
 DEC secondary_stack_object_number
@@ -1717,7 +1717,7 @@ STA secondary_stack_object_number
 LDA secondary_stack_object_number
 EOR secondary_stack_random_1f
 TAX
-LDY #$04		   ; only do this if there are four free slots
+LDY #$04                   ; only do this if there are four free slots
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1726,19 +1726,19 @@ LDY #$04		   ; only do this if there are four free slots
 .move_secondary_object_into_primary_stack
 {
 LDA secondary_object_stack_y,X ; look at random object on secondary
-			       ; stack
-BEQ L0C4D		       ; does it exist? if not, leave
+                               ; stack
+BEQ L0C4D                      ; does it exist? if not, leave
 LDA secondary_object_stack_type,X ; get type
-JSR reserve_objects	     ; find a slot to put it in, create object
-BCS L0C4D		     ; if no free slot, leave
+JSR reserve_objects          ; find a slot to put it in, create object
+BCS L0C4D                    ; if no free slot, leave
 LDA secondary_object_stack_x,X
-STA object_stack_x,Y	       ; get x
+STA object_stack_x,Y           ; get x
 LDA secondary_object_stack_y,X
-STA object_stack_y,Y	       ; get y
+STA object_stack_y,Y           ; get y
 LDA secondary_object_stack_energy_and_low,X
 PHA
 ORA #$0F
-STA object_stack_energy,Y	; get top four bits of energy + &f
+STA object_stack_energy,Y       ; get top four bits of energy + &f
 PLA
 ASL A
 ASL A
@@ -1746,11 +1746,11 @@ ASL A
 ASL A
 PHA
 AND #$C0
-STA object_stack_x_low,Y	; get top two bits of x_low
+STA object_stack_x_low,Y        ; get top two bits of x_low
 PLA
 ASL A
 ASL A
-STA object_stack_y_low,Y	; get top two bits of y_low
+STA object_stack_y_low,Y        ; get top two bits of y_low
 LDA #$00
 STA secondary_object_stack_y,X ; remove from secondary stack
 .L0C4D
@@ -1762,7 +1762,7 @@ RTS
 
 .push_near_objects_from_secondary_to_primary_stack
 {
-LDX #$1F		     ; start with last slot of secondary stack
+LDX #$1F                     ; start with last slot of secondary stack
 .L0C50
 LDA secondary_object_stack_y,X
 STA this_object_y
@@ -1773,12 +1773,12 @@ STX zp_various_9e ; tmp_9e
 JSR is_object_offscreen
 LDX zp_various_9e ; tmp_9e
 BCS L0C6A
-LDY #$01			; if this object is near the screen
+LDY #$01                        ; if this object is near the screen
 JSR move_secondary_object_into_primary_stack ; push it into the
-					     ; primary stack
+                                             ; primary stack
 .L0C6A
 DEX
-BPL L0C50		; continue for the rest of the secondary stack
+BPL L0C50               ; continue for the rest of the secondary stack
 RTS
 }
 
@@ -1787,14 +1787,14 @@ RTS
 
 .copy_object_onto_secondary_stack
 {
-LDX #$1F			; 32 spaces on secondary stack
+LDX #$1F                        ; 32 spaces on secondary stack
 .L0C70
 LDA secondary_object_stack_y,X ; find a free slot
 BEQ secondary_stack_free_slot_found
 DEX
-BPL L0C70			; if no free slots are available
-JMP flash_screen_background	; flash the background to warn the
-				; developer!
+BPL L0C70                       ; if no free slots are available
+JMP flash_screen_background     ; flash the background to warn the
+                                ; developer!
 .secondary_stack_free_slot_found
 LDA this_object_type
 STA secondary_object_stack_type,X ; copy type
@@ -1807,15 +1807,15 @@ ASL A
 ROL A
 ROL A
 AND #$03
-STA zp_various_9c		; top two bits of x_low
+STA zp_various_9c               ; top two bits of x_low
 LDA this_object_y_low
 ASL A
 ROL zp_various_9c
 ASL A
-ROL zp_various_9c		; top two bits of y_low
+ROL zp_various_9c               ; top two bits of y_low
 LDA this_object_energy
 AND #$F0
-ORA zp_various_9c		; top four bits of energy
+ORA zp_various_9c               ; top four bits of energy
 STA secondary_object_stack_energy_and_low,X
 RTS
 }
@@ -1825,7 +1825,7 @@ RTS
 
 .plot_object
 {
-LDA #%00111111			; objects are plotted and &3f
+LDA #%00111111                  ; objects are plotted and &3f
 STA sprite_and
 JSR plot_sprite
 LDX current_object
@@ -1835,7 +1835,7 @@ AND #$05
 CMP #$01
 ROL object_stack_flags,X
 LDA #%11111111
-STA sprite_and		; background is plotted and &ff
+STA sprite_and          ; background is plotted and &ff
 RTS
 }
 
@@ -1844,8 +1844,8 @@ RTS
 
 .teleport_player
 {
-    LDY object_held		; are we holding something?
-    BPL L0CEF			; if so leave - we can't teleport
+    LDY object_held             ; are we holding something?
+    BPL L0CEF                   ; if so leave - we can't teleport
     DEC teleports_used
     BPL L0CD1
     INC teleports_used
@@ -1856,8 +1856,8 @@ RTS
     JSR fix_teleport_last
     TAY
 .L0CD8
-    LDA teleports_x,Y	 ; get a position from the list of teleports
-    STA this_object_tx	 ; set the player's teleport position to match
+    LDA teleports_x,Y    ; get a position from the list of teleports
+    STA this_object_tx   ; set the player's teleport position to match
     LDA teleports_y,Y
     STA this_object_ty
     JSR play_teleport_noise
@@ -1867,10 +1867,10 @@ RTS
 {
 .L0CE5
     LDA this_object_flags
-    ORA #$10			; mark the player as teleporting
+    ORA #$10                    ; mark the player as teleporting
     STA this_object_flags
     LDA #$20
-    STA this_object_timer	; start the teleport timer
+    STA this_object_timer       ; start the teleport timer
     ;; fall through to L0CEF
 }
 .L0CEF
@@ -1885,7 +1885,7 @@ RTS
     ORA #$10 ; mark as teleporting
     STA object_stack_flags,Y
     LDA #$20
-    STA object_stack_timer,Y	; start the teleport timer
+    STA object_stack_timer,Y    ; start the teleport timer
     RTS
 }
 
@@ -1896,28 +1896,28 @@ RTS
 .plot_sprite_resize_if_teleporting
 {
     LDA this_object_flags-2,X ; # X = 3, &70 this_object_flags_old; X
-			      ; = 2, &6f this_object_flags 
-    AND #$10		      ; is the object teleporting?
-    BEQ L0D4A		      ; if not, skip to plot_sprite_continued
+                              ; = 2, &6f this_object_flags 
+    AND #$10                  ; is the object teleporting?
+    BEQ L0D4A                 ; if not, skip to plot_sprite_continued
 .L0D04
     TXA
     AND #$01
     TAY
     LDA this_object_timer,Y ; Y = 1, &13 this_object_timer_old; Y = 0,
-			    ; &12 this_object_timer
+                            ; &12 this_object_timer
     CPX #$02
     BCS L0D15
     STA zp_various_9c
     LSR A
     LSR A
     ADC zp_various_9c ; alter this_object_timer, not
-		      ; this_object_timer_old
+                      ; this_object_timer_old
 .L0D15
     AND #$07
     TAY
     LDA this_sprite_height-2,X ; # X = 3, &4e this_sprite_height_old ;
-			       ; X = 2, &4d this_sprite_height
-			       
+                               ; X = 2, &4d this_sprite_height
+                               
 .L0D1A
     LSR A
     DEY
@@ -1925,39 +1925,39 @@ RTS
     ROL A
     STA zp_various_9c
     LDA this_sprite_height-2,X ; # X = 3, &4e this_sprite_height_old ;
-			       ; X = 2, &4d this_sprite_height
-			       
+                               ; X = 2, &4d this_sprite_height
+                               
     SEC
     SBC zp_various_9c
     LSR A
     AND used_in_redraw_0ba1,X ; X = 3, &0ba4 (&f8), X = 2 &0ba3 (&f8)
-			      
+                              
     PHA
     CLC ; alter the sprite position and the height of the sprite based
-	; on the timer
+        ; on the timer
     ADC this_sprite_b-2,X ; X = 3, &62 this_sprite_b_old ; X = 2, &61
-			  ; this_sprite_b 
+                          ; this_sprite_b 
     ADC #$00
     STA this_sprite_b-2,X ; # X = 3, &62 this_sprite_b_old ; X = 2,
-			  ; &61 this_sprite_b 
+                          ; &61 this_sprite_b 
     PLA
     ADC this_object_y_low-2,X  ; X = 3, &52 this_object_y_low_old; X =
-			       ; 2, &51 this_object_y_low 
+                               ; 2, &51 this_object_y_low 
     STA this_object_y_low-2,X ; # X = 3, &52 this_object_y_low_old; X
-			      ; = 2, &51 this_object_y_low 
+                              ; = 2, &51 this_object_y_low 
     BCC L0D3B
     INC this_object_y-2,X ; # X = 3, &56 this_object_y_old; X = 2, &55
-			  ; this_object_y 
+                          ; this_object_y 
 .L0D3B
     LDA zp_various_9c
     AND used_in_redraw_0ba1,X ; X = 3, &0ba4 (&f8), X = 2 &0ba3 (&f8)
-			      
+                              
     STA this_sprite_height-2,X ; # X = 3, &4e this_sprite_height_old ;
-			       ; X = 2, &4d this_sprite_height
-			       
+                               ; X = 2, &4d this_sprite_height
+                               
     DEX
     DEX
-    BPL L0D04			; now do it again for x direction
+    BPL L0D04                   ; now do it again for x direction
     INX
     INX
     INX
@@ -1970,7 +1970,7 @@ RTS
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 .plot_sprite
-    LDX #$03		 ; first X = 3, previous ; then X = 2, current
+    LDX #$03             ; first X = 3, previous ; then X = 2, current
     ASL skip_sprite_calculation_flags
 ;; Calculate various variables for the sprite, both for its previous
 ;; and current location. We determine the screen address at which to
@@ -1978,69 +1978,69 @@ RTS
 ;; so, we alter its size accordingly.
 .plot_sprite_calculation_loop
     BCS plot_sprite_skip_calculations
-    CPX #$02			
-    BCC plot_sprite_continued	; taken if X<2 (and therefore done)
-    LDY this_object_sprite-2,X	; this_object_sprite/this_object_sprite_old
-    LDA sprite_height_lookup,Y	; A=height entry
-    LSR A			; C=height entry bit 0
-    LDA sprite_width_lookup,Y	; A=width entry
-    ROR A			; b7=height entry bit 0; C=width entry bit 0
-    AND #$80			; b7=height entry bit 0
-    ROR A			; b7=width entry bit 0, b6=height entry bit 0
+    CPX #$02                    
+    BCC plot_sprite_continued   ; taken if X<2 (and therefore done)
+    LDY this_object_sprite-2,X  ; this_object_sprite/this_object_sprite_old
+    LDA sprite_height_lookup,Y  ; A=height entry
+    LSR A                       ; C=height entry bit 0
+    LDA sprite_width_lookup,Y   ; A=width entry
+    ROR A                       ; b7=height entry bit 0; C=width entry bit 0
+    AND #$80                    ; b7=height entry bit 0
+    ROR A                       ; b7=width entry bit 0, b6=height entry bit 0
     EOR this_object_flipping_flags-2,X ; swap based on object flip
-				       ; flags? (So sprite can be
-				       ; flipped as part of its
-				       ; definition??)
+                                       ; flags? (So sprite can be
+                                       ; flipped as part of its
+                                       ; definition??)
     STA this_sprite_flipping_flags-2,X ; save for the sprite
-    ASL A			 ; C = Y flip flag?
+    ASL A                        ; C = Y flip flag?
     STA this_sprite_partflip-2,X ; # X = 3, &66
-				 ; this_sprite_vertflip_old ; X = 2,
-				 ; &65 this_sprite_partflip
-    LDA sprite_width_lookup,Y	 
-    AND #%11110000	      ; mask off actual width??
+                                 ; this_sprite_vertflip_old ; X = 2,
+                                 ; &65 this_sprite_partflip
+    LDA sprite_width_lookup,Y    
+    AND #%11110000            ; mask off actual width??
     STA this_sprite_width-2,X ; # X = 3, &4c this_sprite_width_old ; X
-			      ; = 2, &4b this_sprite_width
+                              ; = 2, &4b this_sprite_width
     LDA sprite_height_lookup,Y
-    AND #%11111000	       ; mask off actual height?
+    AND #%11111000             ; mask off actual height?
     STA this_sprite_height-2,X ; # X = 3, &4e this_sprite_height_old ;
-			       ; X =2, &4d this_sprite_height
+                               ; X =2, &4d this_sprite_height
     LDA sprite_offset_a_lookup,Y
     STA this_sprite_a-2,X ; # X = 3, &60 this_sprite_a_old; X = 2, &5f
-			  ; this_sprite_a 
+                          ; this_sprite_a 
     LDA sprite_offset_b_lookup,Y
     STA this_sprite_b-2,X ; # X = 3, &62 this_sprite_b_old ; X = 2,
-			  ; &61 this_sprite_b 
+                          ; &61 this_sprite_b 
     JMP plot_sprite_resize_if_teleporting
     ; plot_sprite_resize_if_teleporting comes straight back here
 .plot_sprite_continued
     LDA this_object_y_low-2,X ; # X = 3, &52 this_object_y_low_old; X
-			      ; = 2, &51 this_object_y_low 
+                              ; = 2, &51 this_object_y_low 
     AND used_in_redraw_0ba1,X ; always mask with $f8? - extract
-			      ; character row index
+                              ; character row index
     SEC
     SBC screen_offset_y_low-2,X ; X = 3, &0b94
-				; screen_offset_y_low_old, X = 2,
-				; &0b93 screen_offset_y_low
+                                ; screen_offset_y_low_old, X = 2,
+                                ; &0b93 screen_offset_y_low
     STA this_object_screen_y_low-2,X ; X = 3, &5a
-				     ; this_object_screen_y_low_old ;
-				     ; X = 2 &59
-				     ; this_object_screen_y_low
+                                     ; this_object_screen_y_low_old ;
+                                     ; X = 2 &59
+                                     ; this_object_screen_y_low
     LDA this_object_y-2,X ; # X = 3, &56 this_object_y_old; X = 2, &55
-			  ; this_object_y 
+                          ; this_object_y 
     SBC screen_offset_y-2,X ; X = 3, &0b98 screen_offset_y_old; X = 2,
-			    ; &0b97 screen_offset_y 
+                            ; &0b97 screen_offset_y 
     STA this_object_screen_y-2,X ; X = 3, &5e this_object_screen_y_old
-				 ; ; X = 2, &5d this_object_screen_y
+                                 ; ; X = 2, &5d this_object_screen_y
     LDA this_object_screen_y_low-2,X ; X = 3, &5a
-				     ; this_object_screen_y_low_old ;
-				     ; X = 2 &59
-				     ; this_object_screen_y_low
+                                     ; this_object_screen_y_low_old ;
+                                     ; X = 2 &59
+                                     ; this_object_screen_y_low
     CLC
     ADC this_sprite_height-2,X ; X = 3, &4e this_sprite_height_old ; X
-			       ; = 2, &4d this_sprite_height
+                               ; = 2, &4d this_sprite_height
     STA screen_address
     LDA this_object_screen_y-2,X ; X = 3, &5e this_object_screen_y_old
-				 ; ; X = 2, &5d this_object_screen_y
+                                 ; ; X = 2, &5d this_object_screen_y
     ADC #$00
     STA screen_address+1
     BMI L0E06
@@ -2056,21 +2056,21 @@ RTS
     BPL plot_sprite_skip_calculations
 .L0DBC
     LDA this_object_screen_y_low-2,X ; X = 3, &5a
-				     ; this_object_screen_y_low_old ;
-				     ; X = 2 &59
-				     ; this_object_screen_y_low
+                                     ; this_object_screen_y_low_old ;
+                                     ; X = 2 &59
+                                     ; this_object_screen_y_low
 .L0DBE
     CLC
     ADC plot_sprite_screen_location_offsets_low,X
     STA this_object_screen_y_low-2,X ; X = 3, &5a
-				     ; this_object_screen_y_low_old ;
-				     ; X = 2 &59
-				     ; this_object_screen_y_low
+                                     ; this_object_screen_y_low_old ;
+                                     ; X = 2 &59
+                                     ; this_object_screen_y_low
     LDA this_object_screen_y-2,X ; X = 3, &5e this_object_screen_y_old
-				 ; ; X = 2, &5d this_object_screen_y
+                                 ; ; X = 2, &5d this_object_screen_y
     ADC plot_sprite_screen_location_offsets,X
     STA this_object_screen_y-2,X ; X = 3, &5e this_object_screen_y_old
-				 ; ; X = 2, &5d this_object_screen_y
+                                 ; ; X = 2, &5d this_object_screen_y
 .plot_sprite_skip_calculations
     ROL skip_sprite_calculation_flags
     DEX ; do it again for X =2
@@ -2079,45 +2079,45 @@ RTS
 .L0DD3
     LDA screen_address
     SBC this_sprite_height-2,X ; X = 3, &4e this_sprite_height_old ; X
-			       ; = 2, &4d this_sprite_height
+                               ; = 2, &4d this_sprite_height
     BCS plot_sprite_skip_calculations
     EOR used_in_redraw_0ba1,X ; # X = 3, &0ba4 (&f8), X = 2 &0ba3
-			      ; (&f8) 
+                              ; (&f8) 
     STA this_sprite_height-2,X ; X = 3, &4e this_sprite_height_old ; X
-			       ; = 2, &4d this_sprite_height
+                               ; = 2, &4d this_sprite_height
     LDA this_sprite_partflip-2,X ; X = 3, &66 this_sprite_vertflip_old
-				 ; ; X = 2, &65 this_sprite_partflip
+                                 ; ; X = 2, &65 this_sprite_partflip
     BPL L0DBC
     LDA screen_address
     SEC
     SBC used_in_redraw_0ba1,X ; # X = 3, &0ba4 (&f8), X = 2 &0ba3
-			      ; (&f8) 
+                              ; (&f8) 
     ADC this_sprite_b-2,X ; X = 3, &62 this_sprite_b_old ; X = 2, &61
-			  ; this_sprite_b 
+                          ; this_sprite_b 
     ADC #$00
     STA this_sprite_b-2,X ; # X = 3, &62 this_sprite_b_old ; X = 2,
-			  ; &61 this_sprite_b 
+                          ; &61 this_sprite_b 
     BCC L0DBC
 .L0DF0
     LDA screen_address
     STA this_sprite_height-2,X ; # X = 3, &4e this_sprite_height_old ;
-			       ; X = 2, &4d this_sprite_height
+                               ; X = 2, &4d this_sprite_height
     LDA this_sprite_partflip-2,X ; X = 3, &66 this_sprite_vertflip_old
-				 ; ; X = 2, &65 this_sprite_partflip
+                                 ; ; X = 2, &65 this_sprite_partflip
     BMI L0E00
     LDA this_sprite_b-2,X ; # X = 3, &62 this_sprite_b_old ; X = 2,
-			  ; &61 this_sprite_b 
+                          ; &61 this_sprite_b 
     SBC this_object_screen_y_low-2,X ; X = 3, &5a
-				     ; this_object_screen_y_low_old ;
-				     ; X = 2 &59
-				     ; this_object_screen_y_low
+                                     ; this_object_screen_y_low_old ;
+                                     ; X = 2 &59
+                                     ; this_object_screen_y_low
     ADC #$00
     STA this_sprite_b-2,X ; # X = 3, &62 this_sprite_b_old ; X = 2,
-			  ; &61 this_sprite_b 
+                          ; &61 this_sprite_b 
 .L0E00
     LDA #$00
     STA this_object_screen_y-2,X ; X = 3, &5e this_object_screen_y_old
-				 ; ; X = 2, &5d this_object_screen_y
+                                 ; ; X = 2, &5d this_object_screen_y
     BEQ L0DBE
 .L0E06
     SEC
@@ -2138,24 +2138,24 @@ RTS
 
 .consider_whether_object_has_changed
     LDA this_object_y_low
-    EOR this_object_y_low_old	; y_low ?
-    AND #$F8			; 3 fractional bits?
+    EOR this_object_y_low_old   ; y_low ?
+    AND #$F8                    ; 3 fractional bits?
     BNE object_needs_redrawing
     LDA this_object_x_low
-    EOR this_object_x_low_old	; x_low ?
-    AND #$F0			; 4 fractional bits?
+    EOR this_object_x_low_old   ; x_low ?
+    AND #$F0                    ; 4 fractional bits?
     BNE object_needs_redrawing
     LDA this_object_y
-    EOR this_object_y_old	; y ?
+    EOR this_object_y_old       ; y ?
     BNE object_needs_redrawing
     LDA this_object_x
-    EOR this_object_x_old	; x ?
+    EOR this_object_x_old       ; x ?
     BNE object_needs_redrawing
     LDA this_object_sprite
-    EOR this_object_sprite_old	; sprite ?
+    EOR this_object_sprite_old  ; sprite ?
     BNE object_needs_redrawing
     LDA this_object_palette
-    EOR this_object_palette_old	; palette ?
+    EOR this_object_palette_old ; palette ?
     BNE object_needs_redrawing
     LDA this_object_flipping_flags
     EOR this_object_flipping_flags_old ; flipping ?
@@ -2163,8 +2163,8 @@ RTS
     LDA this_object_flags
     ORA this_object_flags_old
     AND #$10
-    BNE object_needs_redrawing	; if either is teleporting?
-    LDA this_sprite_width_old	; sprite width?
+    BNE object_needs_redrawing  ; if either is teleporting?
+    LDA this_sprite_width_old   ; sprite width?
     CMP this_sprite_width
     BCS redraw_object_resized_sprite
     LDA this_sprite_flipping_flags ; this_sprite_b
@@ -2197,17 +2197,17 @@ RTS
 
 ; is the new sprite taller than the old one?
 
-    LDA this_sprite_height_old 	; old height
-    CMP this_sprite_height	; new height
-    BCS L0ECB			; taken if old height < new height
-    LDA this_sprite_partflip	; this_sprite_vertflip_old
+    LDA this_sprite_height_old  ; old height
+    CMP this_sprite_height      ; new height
+    BCS L0ECB                   ; taken if old height < new height
+    LDA this_sprite_partflip    ; this_sprite_vertflip_old
     EOR scroll_square_y_velocity_high
     BMI L0E9C
-    LDA this_sprite_b		
+    LDA this_sprite_b           
     ADC this_sprite_height_old
     ADC #$08
     ADC #$00
-    STA this_sprite_b		
+    STA this_sprite_b           
 .L0E9C
     LDA this_sprite_height
     SEC
@@ -2246,21 +2246,21 @@ RTS
 
     LDX plotter_x     ; first X = 1, previous ; then X = 0, current
     LDA skip_sprite_calculation_flags
-    AND plot_sprite_when_to_flags_and,X	; should we actually plot it?
-    BNE object_redrawing_loop		; if not, continue
-    LDA this_sprite_a,X			; this_sprite_a(_old)
+    AND plot_sprite_when_to_flags_and,X ; should we actually plot it?
+    BNE object_redrawing_loop           ; if not, continue
+    LDA this_sprite_a,X                 ; this_sprite_a(_old)
 
 ; A = abcdefgh
 ;
 ; Byte offset = fghab (32 bytes per line)
 ; Pixel offset = cd (4 pixels/byte)
 
-    ASL A			; a bcdefgh0 
-    ADC #$00			; 0 bcdefgha
-    ASL A			; b cdefgha0
-    ADC #$00			; 0 cdefghab
-    AND #$1F			; 0 000fghab
-    STA sprite_row_byte_offset	; byte offset into row
+    ASL A                       ; a bcdefgh0 
+    ADC #$00                    ; 0 bcdefgha
+    ASL A                       ; b cdefgha0
+    ADC #$00                    ; 0 cdefghab
+    AND #$1F                    ; 0 000fghab
+    STA sprite_row_byte_offset  ; byte offset into row
     
 ;;  Use the palette value to set up zero page &00 &01 &10 &11 &02 &20
 ;;  &22 with pixel values representing the four colours in the palette
@@ -2288,7 +2288,7 @@ RTS
 ; processed separately.
 ;
 ; So, for Cc (left)       And for Dd (right):
-;		                   
+;                                  
 ; | C | c | Idx | Val |   | D | d | Idx | Val |
 ; |---+---+-----+-----|   |---+---+-----+-----|
 ; | 0 | 0 |  0  | $00 |   | 0 | 0 |  0  | $00 |
@@ -2313,43 +2313,43 @@ RTS
 ;
 ; Then add some masking and stuff...
 
-    LDA this_object_palette,X 	; this_object_palette(_old)
-    LSR A		      
+    LDA this_object_palette,X   ; this_object_palette(_old)
+    LSR A                     
     LSR A
     LSR A
     LSR A
-    TAY				; Y = primary colour 
+    TAY                         ; Y = primary colour 
 
-    LDA pixel_table,Y		; map primary colour (0-15) to Mode 2
-				; pixel value with that colour in both
-				; pixels
-    AND #$55			
-    STA $11			; &11 - primary colour right pixel
-    ASL A		      	
-    STA $22			; &22 - primary colour left pixel
+    LDA pixel_table,Y           ; map primary colour (0-15) to Mode 2
+                                ; pixel value with that colour in both
+                                ; pixels
+    AND #$55                    
+    STA $11                     ; &11 - primary colour right pixel
+    ASL A                       
+    STA $22                     ; &22 - primary colour left pixel
     
-    LDA this_object_palette,X	; this_object_palette(_old)
-    AND #$0F			; Y = (palette>>0)&15 - pair index
+    LDA this_object_palette,X   ; this_object_palette(_old)
+    AND #$0F                    ; Y = (palette>>0)&15 - pair index
     TAY
     LDA palette_value_to_pixel_lookup,Y ; get pair
-    AND sprite_and		; 00111111 or 11111111
-    TAY				
-    AND #$55			; get right pixel
-    STA $01			; right 1
+    AND sprite_and              ; 00111111 or 11111111
+    TAY                         
+    AND #$55                    ; get right pixel
+    STA $01                     ; right 1
     ASL A
-    STA $02			; left 1
+    STA $02                     ; left 1
     TYA
-    AND #$AA			; get left pixel
-    STA $20			; left 2
+    AND #$AA                    ; get left pixel
+    STA $20                     ; left 2
     LSR A
-    STA $10			; right 2
+    STA $10                     ; right 2
 
     LDA this_sprite_flipping_flags,X ; this_sprite_flipping_flags(_old)
-    STA this_sprite_partflip	     ; plot_flipping_flags - bit 7=X
-				     ; flip, bit 6=Y flip
-    LSR A			     ; 0XY.....
-    LSR A			     ; 00XY....
-    LSR A			     ; 000XY...
+    STA this_sprite_partflip         ; plot_flipping_flags - bit 7=X
+                                     ; flip, bit 6=Y flip
+    LSR A                            ; 0XY.....
+    LSR A                            ; 00XY....
+    LSR A                            ; 000XY...
 
 ; Initially, pixels need swapping if the object is X-flipped.
 
@@ -2357,7 +2357,7 @@ RTS
 ; start coordinate will then be the opposite parity from the screen X
 ; coordinate.
 
-    AND this_sprite_width,X	; this_sprite_width(_old)
+    AND this_sprite_width,X     ; this_sprite_width(_old)
 
 ; If screen X coordinate is odd, invert the flag.
 
@@ -2365,10 +2365,10 @@ RTS
 
 ; I'm prepared to believe that this is correct ;)
 
-    EOR this_sprite_a,X		; this_sprite_a(_old)
+    EOR this_sprite_a,X         ; this_sprite_a(_old)
 
-    AND #$10			; combination of all of the above
-    BEQ dont_swap		; branch taken if pixel values are OK
+    AND #$10                    ; combination of all of the above
+    BEQ dont_swap               ; branch taken if pixel values are OK
 
     ; Swap. $00 is shared; there's only 3 pairs.
     
@@ -2380,82 +2380,82 @@ RTS
 
 ;;  Calculate the offset between rows in the sprite
 
-    LDA #$20:LDY #$00		; $0020 - +32
-    BIT this_sprite_partflip	; test .Y......
-    BVS L0F41			; taken if Y set
-    LDA #$E0:DEY		; $ffe0 - -32
+    LDA #$20:LDY #$00           ; $0020 - +32
+    BIT this_sprite_partflip    ; test .Y......
+    BVS L0F41                   ; taken if Y set
+    LDA #$E0:DEY                ; $ffe0 - -32
 .L0F41
 
-    STA L107C+1			; fix up ADC# for LSB
-    STY L1084+1			; fix up ADC# for MSB
+    STA L107C+1                 ; fix up ADC# for LSB
+    STY L1084+1                 ; fix up ADC# for MSB
     
 ;;  Calculate the sprite address
 
 ; Put starting Y coord in A - either the sprite height, or 0,
 ; depending on whether it's flipped.
 
-    LDA this_sprite_height,X	; this_sprite_height(_old)
-    BVC L0F4D			; taken if Y was clear above
-    LDA #$00			; 
+    LDA this_sprite_height,X    ; this_sprite_height(_old)
+    BVC L0F4D                   ; taken if Y was clear above
+    LDA #$00                    ; 
 .L0F4D
-    CLC			; 
+    CLC                 ; 
     ADC this_sprite_b,X ; add sprite data Y coordinate
-    ADC #$00		; add carry - note that there will only be
-			; carry when starting from this_sprite_height
-			; (rather than $00), in which case the bottom
-			; 3 bits will be clear (see
-			; plot_sprite_calculation_loop)
-    ASL A		; |
-    ADC #$00		; | yyYYY0xx -> yYYY0xxy
-    ASL A		; |
-    ADC #$00		; | yYYY0xxy -> YYY0xxyy
-    STA zp_various_9d	; 
+    ADC #$00            ; add carry - note that there will only be
+                        ; carry when starting from this_sprite_height
+                        ; (rather than $00), in which case the bottom
+                        ; 3 bits will be clear (see
+                        ; plot_sprite_calculation_loop)
+    ASL A               ; |
+    ADC #$00            ; | yyYYY0xx -> yYYY0xxy
+    ASL A               ; |
+    ADC #$00            ; | yYYY0xxy -> YYY0xxyy
+    STA zp_various_9d   ; 
 
-    AND #%11100000	; | YYY0000 (LSB of y*32)
+    AND #%11100000      ; | YYY0000 (LSB of y*32)
     ORA sprite_row_byte_offset
-    ADC #LO(sprite_data)	; get LSB of sprite address
-    STA line_loop+1		; sprite_address
-    LDA zp_various_9d		; YYY0xxyy
-    AND #%00001111		; 0000xxyy (MSB of y*32)
-    ADC #HI(sprite_data)	; 
-    STA line_loop+2		; self modifying code
+    ADC #LO(sprite_data)        ; get LSB of sprite address
+    STA line_loop+1             ; sprite_address
+    LDA zp_various_9d           ; YYY0xxyy
+    AND #%00001111              ; 0000xxyy (MSB of y*32)
+    ADC #HI(sprite_data)        ; 
+    STA line_loop+2             ; self modifying code
     
 ;;  Calculate the number of bytes in a line of the sprite
 
     LDA this_object_screen_x_low,X ; this_object_screen_x_low(_old)
-    AND #$10			   ; LSb
-    ADC this_sprite_width,X	   ; this_sprite_width(_old)
+    AND #$10                       ; LSb
+    ADC this_sprite_width,X        ; this_sprite_width(_old)
     STA velocity_signs_OR_pixel_colour
-    ROR A			
-    AND #$F0			
-    LSR A			; width*8?
+    ROR A                       
+    AND #$F0                    
+    LSR A                       ; width*8?
     STA zp_various_a0
-    LDA this_sprite_a,X	     ; this_sprite_a(_old)
-    AND #$30		     ; sprite data pixel X coordinate bits 0/1
+    LDA this_sprite_a,X      ; this_sprite_a(_old)
+    AND #$30                 ; sprite data pixel X coordinate bits 0/1
     ADC this_sprite_width,X  ; this_sprite_width(_old) - get inclusive
-			     ; width including an extra pixel if
-			     ; starting on an odd X coordinate
-    ROR A		     ; wwwww000
-    LSR A		     ; 0wwwww00
-    LSR A		     ; 00wwwww0
-    LSR A		     ; 000wwwww
-    TAY			     ; 
-    LSR A		     ; /2
-    LSR A		     ; /4 (since 4 pixel/byte)
+                             ; width including an extra pixel if
+                             ; starting on an odd X coordinate
+    ROR A                    ; wwwww000
+    LSR A                    ; 0wwwww00
+    LSR A                    ; 00wwwww0
+    LSR A                    ; 000wwwww
+    TAY                      ; 
+    LSR A                    ; /2
+    LSR A                    ; /4 (since 4 pixel/byte)
     STA bytes_per_line_in_sprite ; 
     
 ;;  Calculate the number of bytes in a line on the screen. The sprite data is
 ;;  unpacked into the stack - we also calculate where to put it.
 
-    LDA this_sprite_width,X	; this_sprite_width(_old)
-    LSR A			; 
-    LSR A			; 
-    LSR A			; 
-    LSR A			; remove the fractional bits
-    STA zp_various_9d		; sprite width in pixels
-    TYA				; 
-    AND #$03			; remainder due to 4 pixels/byte
-    CLC				; 
+    LDA this_sprite_width,X     ; this_sprite_width(_old)
+    LSR A                       ; 
+    LSR A                       ; 
+    LSR A                       ; 
+    LSR A                       ; remove the fractional bits
+    STA zp_various_9d           ; sprite width in pixels
+    TYA                         ; 
+    AND #$03                    ; remainder due to 4 pixels/byte
+    CLC                         ; 
     ADC copy_of_stack_pointer_6a ; 
     SBC #$01
     STA L1051+1 ; self modifying code
@@ -2464,12 +2464,12 @@ RTS
     SBC zp_various_9d
     SBC #$02
     STA L1054+1 ; self modifying code
-    LDY #$CA	; &ca = DEX (right facing)
-    BIT this_sprite_partflip	; plot_flipping_flags
-    BPL L0FAF			; 
+    LDY #$CA    ; &ca = DEX (right facing)
+    BIT this_sprite_partflip    ; plot_flipping_flags
+    BPL L0FAF                   ; 
     TAX
     DEX
-    LDY #$E8			; &e8 = INX (left facing)
+    LDY #$E8                    ; &e8 = INX (left facing)
 .L0FAF
     LDA velocity_signs_OR_pixel_colour
     AND #$10
@@ -2478,14 +2478,14 @@ RTS
 .L0FB8 INX    ; either INX or DEX from &0fb5
 .L0FB9
     STX bytes_per_line_on_screen ; 
-    STY L105C			 ; self modifying code
-    STY L1060			 ; self modifying code
+    STY L105C                    ; self modifying code
+    STY L1060                    ; self modifying code
 ;;  Calculate the number of lines in the sprite
     LDX plotter_x
-    LDA this_sprite_height,X	; this_sprite_height(_old)
-    LSR A			; 
-    LSR A			; 
-    LSR A			; remove the fractional bits
+    LDA this_sprite_height,X    ; this_sprite_height(_old)
+    LSR A                       ; 
+    LSR A                       ; 
+    LSR A                       ; remove the fractional bits
     STA lines_in_sprite
     
 ;; Calculate the screen address of the sprite.
@@ -2493,42 +2493,42 @@ RTS
 ;; 3 fractional bits for Y.
 
     LDA this_object_screen_y_low,X ; this_object_screen_y_low(_old)
-    CLC				   ; LSB of Y*8
-    ADC this_sprite_height,X	   ; this_sprite_height(_old)
-    STA screen_address		   ; LSB address
+    CLC                            ; LSB of Y*8
+    ADC this_sprite_height,X       ; this_sprite_height(_old)
+    STA screen_address             ; LSB address
     
-    LDA this_object_screen_y,X	; this_object_screen_y(_old)
-    ADC #$00			; MSB of Y*8
-    STA screen_address+1	; MSB address
+    LDA this_object_screen_y,X  ; this_object_screen_y(_old)
+    ADC #$00                    ; MSB of Y*8
+    STA screen_address+1        ; MSB address
     
-    JSR scroll_screen		; 
+    JSR scroll_screen           ; 
 
 ; Currently have (Y+sprite_height)*8 in screen_address
 
-    LDA screen_address	        
-    LSR screen_address+1:ROR A 	; (Y+sprite_height)*4
-    LSR screen_address+1:ROR A	; (Y+sprite_height)*2
-    LSR screen_address+1:ROR A	; Y+sprite_height
-    TAY				; save LSB (for row)
-    AND #$07			; get scanline, 0-7, in character row
-    ORA zp_various_a0		; width*8
-    STA sprite_dest_offset	; use that as the offset
-    ORA #$07			; get equivalent for scanline 7 in the
-				; row
+    LDA screen_address          
+    LSR screen_address+1:ROR A  ; (Y+sprite_height)*4
+    LSR screen_address+1:ROR A  ; (Y+sprite_height)*2
+    LSR screen_address+1:ROR A  ; Y+sprite_height
+    TAY                         ; save LSB (for row)
+    AND #$07                    ; get scanline, 0-7, in character row
+    ORA zp_various_a0           ; width*8
+    STA sprite_dest_offset      ; use that as the offset
+    ORA #$07                    ; get equivalent for scanline 7 in the
+                                ; row
     STA sprite_initial_dest_offset ; that's the initial value for dest
-				   ; offset after moving to previous
-				   ; row
+                                   ; offset after moving to previous
+                                   ; row
     LDA this_object_screen_x_low,X ; this_object_screen_x_low(_old)
-    AND #$E0			   ; %11100000
+    AND #$E0                       ; %11100000
     ADC screen_start_square_x_low_copy ;
-    STA screen_address		       ; 
-    TYA				       ; get LSB (for row) back again
-    AND #$F8			       ; get just the character row part
-    EOR this_object_screen_x,X	       ; this_object_screen_x(_old) -
-				       ; ??guess this must just be
-				       ; 1-3 bits??
+    STA screen_address                 ; 
+    TYA                                ; get LSB (for row) back again
+    AND #$F8                           ; get just the character row part
+    EOR this_object_screen_x,X         ; this_object_screen_x(_old) -
+                                       ; ??guess this must just be
+                                       ; 1-3 bits??
     ADC some_screen_address_offset     ; ??add scrolling offset MSB,
-				       ; pre-scaled??
+                                       ; pre-scaled??
 
 ;; Ignoring the X coordinate's contribution, the accumulator value is
 ;; a row-aligned scanline coordinate: 0, 8, 16, 24, etc. Each
@@ -2538,31 +2538,31 @@ RTS
 ;; ??figure out the X values... they must be scaled already to make
 ;; this work??
 
-    ROR A:ROR screen_address	       ; /2
-    LSR A:ROR screen_address	       ; /4
-    ORA #screen_base_page	       ; make a screen address
-    STA screen_address+1	       ; save it
+    ROR A:ROR screen_address           ; /2
+    LSR A:ROR screen_address           ; /4
+    ORA #screen_base_page              ; make a screen address
+    STA screen_address+1               ; save it
 .plot_lines_loop
-    CMP #$7F			; check MSB
-    BNE plot_sprite_line	; taken if no risk of overflow out of
-				; RAM area
+    CMP #$7F                    ; check MSB
+    BNE plot_sprite_line        ; taken if no risk of overflow out of
+                                ; RAM area
 
 ;; MSB is $7f, so the line being written could run over $8000.
 
-    LDA screen_address		
+    LDA screen_address          
     CLC
-    ADC sprite_dest_offset	; get LSB of end point
-    BCC plot_sprite_line	; taken if line won't run over $8000
+    ADC sprite_dest_offset      ; get LSB of end point
+    BCC plot_sprite_line        ; taken if line won't run over $8000
 
 ;; the line being written will run over $8000, so there'll need to be
 ;; extra code to handle this.
 
-    STA something_plot_var	; LSB of end point
+    STA something_plot_var      ; LSB of end point
 
 ;; the BVC is a JMP, I think... the sprites are never wide enough to
 ;; cause a problem.
 
-    LDA #$50:STA L1070		     ; set L1070 to BVC
+    LDA #$50:STA L1070               ; set L1070 to BVC
     LDA #L109C-(L1070+2):STA L1070+1 ; set L1070 to BVC L109C
 
 .plot_sprite_line
@@ -2571,36 +2571,36 @@ RTS
 .line_loop
 ;; $ffff is actually sprite address, as modified by various places
 ;; above.
-    LDA $FFFF,Y			; ABCDabcd
-    TAX				; ABCDabcd ABCDabcd
-    AND #$11			; 000D000d ABCDabcd
-    STA L102B+1 		
-.L102B LDA $FF 			; 0D0D0D0D [mode 2]
-    PHA				; push on to stack
-    TXA				; ABCDabcd
-    AND #$22			; 00C000c0
-    STA L1034+1 		
-.L1034 LDA $FF	       		; C0C0C0C0 [mode 2]
-    PHA				; push on to stack
-    TXA				; ABCDabcd
-    LSR A			; 0ABCDabc
-    LSR A			; 00ABCDab
-    TAX				; 
-    AND #$11			; 000B000b
+    LDA $FFFF,Y                 ; ABCDabcd
+    TAX                         ; ABCDabcd ABCDabcd
+    AND #$11                    ; 000D000d ABCDabcd
+    STA L102B+1                 
+.L102B LDA $FF                  ; 0D0D0D0D [mode 2]
+    PHA                         ; push on to stack
+    TXA                         ; ABCDabcd
+    AND #$22                    ; 00C000c0
+    STA L1034+1                 
+.L1034 LDA $FF                  ; C0C0C0C0 [mode 2]
+    PHA                         ; push on to stack
+    TXA                         ; ABCDabcd
+    LSR A                       ; 0ABCDabc
+    LSR A                       ; 00ABCDab
+    TAX                         ; 
+    AND #$11                    ; 000B000b
     STA L1040+1
-.L1040 LDA $FF			; 0B0B0B0B [mode 2]
-    PHA				; push on to stack
-    TXA				; 00ABCDab
-    AND #$22			; 00A000a0
+.L1040 LDA $FF                  ; 0B0B0B0B [mode 2]
+    PHA                         ; push on to stack
+    TXA                         ; 00ABCDab
+    AND #$22                    ; 00A000a0
     STA L1049+1 
-.L1049 LDA $FF	   		; A0A0A0A0 [mode 2]
-    PHA				; push on to stack
-    DEY				;
-    BPL line_loop		; loop for all input bytes 
-    PHA				; erm...?
-    INY				; Y=0
-.L1051 STY $01ff			; actually &01XX from &0f99
-.L1054 STY $01ff			; actually &01XX from &0fa2
+.L1049 LDA $FF                  ; A0A0A0A0 [mode 2]
+    PHA                         ; push on to stack
+    DEY                         ;
+    BPL line_loop               ; loop for all input bytes 
+    PHA                         ; erm...?
+    INY                         ; Y=0
+.L1051 STY $01ff                        ; actually &01XX from &0f99
+.L1054 STY $01ff                        ; actually &01XX from &0fa2
     SEC
     LDY sprite_dest_offset
 .L105A
@@ -2610,10 +2610,10 @@ RTS
 ;;  consider what is there already - if it's background data (&80 is
 ;;  set), don't.
 .plot_screen_loop
-.L105C DEX		       ; actually either DEX or INX from &0fbb
-    LDA $100,X		       ; get left/right pixel from stack
-.L1060 DEX		       ; actually either DEX or INX from &0fbe
-    ORA $100,X		       ; mask in other pixel from stack
+.L105C DEX                     ; actually either DEX or INX from &0fbb
+    LDA $100,X                 ; get left/right pixel from stack
+.L1060 DEX                     ; actually either DEX or INX from &0fbe
+    ORA $100,X                 ; mask in other pixel from stack
 
 ;; This snippet is either EOR/BMI or BMI/EOR. `change_display_mode'
 ;; toggles between them.
@@ -2625,22 +2625,22 @@ RTS
 ;; on screen (though this isn't quite a perfect check as the N flag
 ;; only covers the left pixel - and you can sometimes tell).
 
-.L1064 EOR (screen_address),Y	; read the current screen data
+.L1064 EOR (screen_address),Y   ; read the current screen data
 .L1066 BMI L106A ; actually either "EOR, BMI &106a" or "BMI &1068, EOR" from &10f0
 .L1068:
     STA (screen_address),Y ; plot the sprite to screen depending on plotting mode
 .L106A
-    TYA				; offset in character row
-    SBC #$08			; next column
-    TAY				; 
-    BCS plot_screen_loop	; taken if offset>=0
+    TYA                         ; offset in character row
+    SBC #$08                    ; next column
+    TAY                         ; 
+    BCS plot_screen_loop        ; taken if offset>=0
 
 .L1070 LDX copy_of_stack_pointer_6a ; actually either "LDX &6a" or "BVC L109C" from &10c5, &10c5 or &1016, &101b
 .L1072
-    TXS				; reset stack pointer
+    TXS                         ; reset stack pointer
     DEC lines_in_sprite
-    BMI plotting_done		; any more lines to do? if not, leave
-    DEC find_carry		; next screen line next time
+    BMI plotting_done           ; any more lines to do? if not, leave
+    DEC find_carry              ; next screen line next time
     
 ;; adjust sprite data address in initial LDA in sprite loop
 
@@ -2663,11 +2663,11 @@ RTS
     STA find_carry
     ; there are $200 bytes per line...
     LDA screen_address+1 
-    SBC #$01			; actually SBC #2 - the BCS fell
-				; through, so carry is clear
-    ORA #screen_base_page	
+    SBC #$01                    ; actually SBC #2 - the BCS fell
+                                ; through, so carry is clear
+    ORA #screen_base_page       
     STA screen_address+1
-    JMP plot_lines_loop		; do it all again for the next line
+    JMP plot_lines_loop         ; do it all again for the next line
 
 .L109C
 
@@ -2679,44 +2679,44 @@ RTS
 
 ;; Could be either pass...
 
-    LDA screen_address+1	; get screen address MSB
-    CMP #$7F			; set C if >=$7f, i.e., pass 1
-    EOR #screen_size_pages-1	; toggle between $7f and $40/$60,
-				; setting address for next pass
-    STA screen_address+1	; save new MSB
-    BCC L10B2			; taken if MSB was <$7f - i.e. we just
-				; did pass 2
-				
+    LDA screen_address+1        ; get screen address MSB
+    CMP #$7F                    ; set C if >=$7f, i.e., pass 1
+    EOR #screen_size_pages-1    ; toggle between $7f and $40/$60,
+                                ; setting address for next pass
+    STA screen_address+1        ; save new MSB
+    BCC L10B2                   ; taken if MSB was <$7f - i.e. we just
+                                ; did pass 2
+                                
 ;; handle end of pass 1
 
-    LDA screen_address		; get screen address LSB
-    STA some_other_plot_var	; save for pass 2
-    LDA #$00			; reset screen address LSB
-    STA screen_address		; screen address now $4000 or $6000
-    LDY something_plot_var	; LSB of starting address - this will
-				; do as the dest offset now, and the
-				; carry check will prevent writing to
-				; <$4000 or <$6000 and bail out at the
-				; appropriate column
-    BCS L105A			; JMP, in effect
+    LDA screen_address          ; get screen address LSB
+    STA some_other_plot_var     ; save for pass 2
+    LDA #$00                    ; reset screen address LSB
+    STA screen_address          ; screen address now $4000 or $6000
+    LDY something_plot_var      ; LSB of starting address - this will
+                                ; do as the dest offset now, and the
+                                ; carry check will prevent writing to
+                                ; <$4000 or <$6000 and bail out at the
+                                ; appropriate column
+    BCS L105A                   ; JMP, in effect
     
 .L10B2
 
 ;; handle end of pass 2
 
-    LDA some_other_plot_var	; get screen address LSB, previously
-				; saved above
-    STA screen_address		; restore screen adress LSB
+    LDA some_other_plot_var     ; get screen address LSB, previously
+                                ; saved above
+    STA screen_address          ; restore screen adress LSB
     LDX copy_of_stack_pointer_6a ; restore X
-    CPY #$F9			 ; same $f9 check as above
-    BCC L10C3			 ; taken if this line is done
+    CPY #$F9                     ; same $f9 check as above
+    BCC L10C3                    ; taken if this line is done
 
 ;; ??don't know about the logic here? - think it keeps L109C active
 ;; for as little time as possible??
 
     DEC something_plot_var
-    CLC				
-    LDA lines_in_sprite		
+    CLC                         
+    LDA lines_in_sprite         
     BNE L1072
     
 .L10C3
@@ -2724,11 +2724,11 @@ RTS
 ;; end of sprite, so put everything back as it was and go back to the
 ;; normal flow for an orderly exit.
 
-    LDA #$A6			; LDX $xx
-    STA L1070			
+    LDA #$A6                    ; LDX $xx
+    STA L1070                   
     LDA #copy_of_stack_pointer_6a ; LDX $6a
-    STA L1070+1			  
-    BCC L1072			; JMP, in effect
+    STA L1070+1                   
+    BCC L1072                   ; JMP, in effect
     
 .plotting_done
     JMP object_redrawing_loop
@@ -3140,21 +3140,21 @@ num_keys=39
 
 IF SRAM
 .M129B
-    bit $fe6d			; test user VIA IFR
-    bvc M12B8			; branch taken if not T1 interrupt
+    bit $fe6d                   ; test user VIA IFR
+    bvc M12B8                   ; branch taken if not T1 interrupt
 
 ; set T1 to smp_next_delay<<7. 
 
-    lda #0			; 
-    lsr smp_next_delay		; C = smp_next_delay bit 0
-    ror a			; LO(smp_next_delay<<7)
-    sta $fe64			
-    lda smp_next_delay		; HI(smp_next_delay<<7) 
+    lda #0                      ; 
+    lsr smp_next_delay          ; C = smp_next_delay bit 0
+    ror a                       ; LO(smp_next_delay<<7)
+    sta $fe64                   
+    lda smp_next_delay          ; HI(smp_next_delay<<7) 
     sta $fe65
-    lda smp_next_volume_cmd	; get next value to write - either
-				; silence or appropriate volume command
-    jsr push_sound_to_chip	; do it
-    jsr smp_next_byte		; prepare next byte
+    lda smp_next_volume_cmd     ; get next value to write - either
+                                ; silence or appropriate volume command
+    jsr push_sound_to_chip      ; do it
+    jsr smp_next_byte           ; prepare next byte
 .M12B8
 ENDIF
 .L12A3
@@ -3200,19 +3200,19 @@ ENDIF
     JSR push_palette_register_data ; if so, push it to the video chip
     STY palette_register_data_updated ; and mark it as having been updated
 .no_update_to_palette
-    LDA #$7F		; set port A for input on bit 7 others outputs
+    LDA #$7F            ; set port A for input on bit 7 others outputs
     STA $FE43
-    LDA #$03			; stop auto scan
+    LDA #$03                    ; stop auto scan
     STA $FE40
-    LDX keys_processed	     ; have we processed the last lot of keys?
-    BEQ L12FA		     ; don't check again unless we have
+    LDX keys_processed       ; have we processed the last lot of keys?
+    BEQ L12FA                ; don't check again unless we have
     LDX #num_keys-1
 .L12FA
-    LDA keys_to_check,X		; has a key been pressed?
-    STA $FE4F			; store the key sym
-    LDA $FE4F			; read the result
+    LDA keys_to_check,X         ; has a key been pressed?
+    STA $FE4F                   ; store the key sym
+    LDA $FE4F                   ; read the result
     ROL A
-    ROR keys_pressed,X		; and store in keys_pressed
+    ROR keys_pressed,X          ; and store in keys_pressed
     DEX
     BPL L12FA
     LDA #$0B ; select auto scan of keyboard
@@ -4329,8 +4329,8 @@ ENDIF
 .player_teleporting_flag
     equb $00
 .main_loop
-    LSR whistle1_played		; reset whistle1
-    INC loop_counter		; increment loop counter
+    LSR whistle1_played         ; reset whistle1
+    INC loop_counter            ; increment loop counter
     LDA loop_counter
     LDY #$FF
     LDX #$05
@@ -4338,7 +4338,7 @@ ENDIF
 .L19C0
     LSR A
     BCC L19C4
-    INY			  ; loop_counter_every_X is &ff every X counts
+    INY                   ; loop_counter_every_X is &ff every X counts
 .L19C4
     STY loop_counter_every_40,X
     DEX
@@ -4348,22 +4348,22 @@ ENDIF
     JSR process_events
     LDX #$02
 .L19D4
-    LDA red_mushroom_daze-1,X	; decrease mushroom_daze if not zero
+    LDA red_mushroom_daze-1,X   ; decrease mushroom_daze if not zero
     BEQ L19DC
     DEC red_mushroom_daze-1,X
 .L19DC
     DEX ; for both red and blue dazes
     BPL L19D4
-    LDA explosion_timer		; increase explosion_timer if not zero
+    LDA explosion_timer         ; increase explosion_timer if not zero
     BEQ L19E7
     INC explosion_timer
 .L19E7
-    JMP main_loop		; go round the loop again
+    JMP main_loop               ; go round the loop again
 .handle_background_object
     TSX
     STX copy_of_stack_pointer
     LDX square_sprite
-    BPL L19F5	 ; we've already got A and calculated h of our handler
+    BPL L19F5    ; we've already got A and calculated h of our handler
 .handle_current_object
     TAX
     LDA object_handler_table_h,X ; Calculate address of object handler
@@ -4376,9 +4376,9 @@ ENDIF
     PLA
     AND #$3F
     ADC #HI(handlers_start-1)   ; -1 to account for RTS logic
-    PHA			    ; high = ((&0432, type + &14)) & 3f) + &3e
+    PHA                     ; high = ((&0432, type + &14)) & 3f) + &3e
     TXA
-    PHA				; low = (&03b9, type + &14) + &1a
+    PHA                         ; low = (&03b9, type + &14) + &1a
     LDX this_object_data
     TXA
     CPY #$00
@@ -4387,8 +4387,8 @@ ENDIF
     LDX #$00 ; start with object 0
 .L1A0D
     STX current_object
-    LDA object_stack_y,X	; is there an object here?
-    BNE process_object		; if so, process it
+    LDA object_stack_y,X        ; is there an object here?
+    BNE process_object          ; if so, process it
     JMP next_object
 .process_object
     STA this_object_y ; pull object's details from object stack into registers
@@ -4442,63 +4442,63 @@ ENDIF
     LDA object_stack_timer,X
     STA this_object_timer
     STA this_object_timer_old
-    LDA current_object	      ; calculate current_object_rotator[_low]
+    LDA current_object        ; calculate current_object_rotator[_low]
     ASL A
     ASL A
     ASL A
     ASL A
     ORA current_object
-    ADC loop_counter	     ; current_object * 17 + loop_counter, ie:
+    ADC loop_counter         ; current_object * 17 + loop_counter, ie:
     STA current_object_rotator ; random number from &00-&ff, unique for each object
     AND #$0F
     STA current_object_rotator_low ; random number from &00-&0f, unique for each object
     LDA this_object_x
-    JSR get_water_level_for_x	; calculate water_level
+    JSR get_water_level_for_x   ; calculate water_level
     LDY current_object
     CPY whistle2_played
     BNE not_being_used
-    ROR whistle2_played		; reset whistle2_played
+    ROR whistle2_played         ; reset whistle2_played
 .not_being_used
     JSR get_object_gravity_flags ; get_object_weight ; calculate object weight
     STA this_object_weight
     CMP #$07 ; is the object affected by gravity?
     ROR object_affected_by_gravity
     BPL no_anti_gravity
-    JSR zero_velocities		; if not, zero its y velocity
+    JSR zero_velocities         ; if not, zero its y velocity
 .no_anti_gravity
     LDX this_object_sprite
     LDA sprite_width_lookup,X
     AND #$F0
-    STA this_object_width	; calculate sprite sizes for object
+    STA this_object_width       ; calculate sprite sizes for object
     LDA sprite_height_lookup,X
     AND #$F8
     STA this_object_height
     LDX #$00
-    STX acceleration_x		; reset object accelerations to 0
+    STX acceleration_x          ; reset object accelerations to 0
     STX acceleration_y
-    STX gun_aim_acceleration	; reset gun_aim_acceleration to 0
+    STX gun_aim_acceleration    ; reset gun_aim_acceleration to 0
     STX object_collision_with_other_object_top_bottom
     STX object_collision_with_other_object_sides
     STX wall_collision_frict_y_vel
-    STX child_created		; reset child_created to 0
+    STX child_created           ; reset child_created to 0
     STX wall_collision_angle
     DEX
     STX something_about_player_angle
-    STX object_is_invisible	; objects are not invisible by default
-    JSR move_object		; move object using current velocities
+    STX object_is_invisible     ; objects are not invisible by default
+    JSR move_object             ; move object using current velocities
     LDX current_object
-    BNE not_player		; is this the player?
-    LDY object_held		; if so, are we holding something?
+    BNE not_player              ; is this the player?
+    LDY object_held             ; if so, are we holding something?
     BMI not_player
     JSR get_object_gravity_flags ; get_object_weight
     TAY
     LDA weight_when_held,Y
-    STA this_object_weight	; increase our weight to match
+    STA this_object_weight      ; increase our weight to match
     LDX current_object
 .not_player
     CPX object_held
-    BNE not_held_object	; is this object being held? if so, put next to us
-    LDX object_stack_sprite	; player sprite
+    BNE not_held_object ; is this object being held? if so, put next to us
+    LDX object_stack_sprite     ; player sprite
     LDA sprite_height_lookup,X
     SEC
     SBC this_object_height    ; half player height minus object height
@@ -4506,44 +4506,44 @@ ENDIF
     ROR A
     EOR #$80
     AND #$F8
-    ADC object_stack_y_low	; player y_low
-    STA this_object_y_low	; set object y_low to match
+    ADC object_stack_y_low      ; player y_low
+    STA this_object_y_low       ; set object y_low to match
     STA held_object_y_low
-    LDA object_stack_y		; player y
+    LDA object_stack_y          ; player y
     ADC #$00
     PLP
     SBC #$00
-    STA this_object_y		; set object y to match
+    STA this_object_y           ; set object y to match
     STA held_object_y
     LDA sprite_width_lookup,X
     ADC #$0F
     LDX #$00
-    BIT object_stack_flags	; player flags
-    BPL L1B33			; are we facing left?
+    BIT object_stack_flags      ; player flags
+    BPL L1B33                   ; are we facing left?
     LDA this_object_width
-    ADC #$10			; if not, add player width to x_low
+    ADC #$10                    ; if not, add player width to x_low
     DEX
     JSR make_positive
 .L1B33
     CLC
-    ADC object_stack_x_low	; player x_low
-    STA this_object_x_low	; set object x_low to match
+    ADC object_stack_x_low      ; player x_low
+    STA this_object_x_low       ; set object x_low to match
     STA held_object_x_low
     TXA
-    ADC object_stack_x		; player x
-    STA this_object_x		; set objects x to match
+    ADC object_stack_x          ; player x
+    STA this_object_x           ; set objects x to match
     STA held_object_x
     LDY #$00 ; get player velocities
-    JSR get_object_velocities	; set object velocities to match
-    LDA object_stack_flags	; get player flags
-    STA this_object_angle	; set object flags_copy2 to match
+    JSR get_object_velocities   ; set object velocities to match
+    LDA object_stack_flags      ; get player flags
+    STA this_object_angle       ; set object flags_copy2 to match
 .not_held_object
     JSR calculate_object_maxes
     BIT object_affected_by_gravity ; is the object static?
     BMI static_object
     JSR determine_what_supporting
     LDY current_object
-    BNE not_player2		; is this the player?
+    BNE not_player2             ; is this the player?
     LDA wall_collision_angle
     SBC player_angle
     SBC #$40
@@ -4554,7 +4554,7 @@ ENDIF
     ADC wall_collision_frict_y_vel
     BCC not_player2
     LSR A
-    JSR damage_object	     ; take damage from colliding with scenery
+    JSR damage_object        ; take damage from colliding with scenery
     STA this_object_energy
 .not_player2
     LDA wall_collision_bottom_minus_top
@@ -4965,22 +4965,22 @@ ENDIF
     equb $00,$80,$07,$70
 .pixel_table
 ;                                 ABCDEFGH
-equb $00			; 00000000 0  0  
-equb $03			; 00000011 1  1  
-equb $0C			; 00001100 2  2  
-equb $0F			; 00001111 3  3  
-equb $30			; 00110000 4  4  
-equb $33			; 00110011 5  5  
-equb $3C			; 00111100 6  6  
-equb $3F			; 00111111 7  7  
-equb $C0			; 11000000 8  8  
-equb $C3			; 11000011 9  9  
-equb $CC			; 11001100 10 10
-equb $CF			; 11001111 11 11
-equb $F0			; 11110000 12 12
-equb $F3			; 11110011 13 13
-equb $FC			; 11111100 14 14
-equb $FF			; 11111111 15 15
+equb $00                        ; 00000000 0  0  
+equb $03                        ; 00000011 1  1  
+equb $0C                        ; 00001100 2  2  
+equb $0F                        ; 00001111 3  3  
+equb $30                        ; 00110000 4  4  
+equb $33                        ; 00110011 5  5  
+equb $3C                        ; 00111100 6  6  
+equb $3F                        ; 00111111 7  7  
+equb $C0                        ; 11000000 8  8  
+equb $C3                        ; 11000011 9  9  
+equb $CC                        ; 11001100 10 10
+equb $CF                        ; 11001111 11 11
+equb $F0                        ; 11110000 12 12
+equb $F3                        ; 11110011 13 13
+equb $FC                        ; 11111100 14 14
+equb $FF                        ; 11111111 15 15
 .number_of_particles
     equb $FF
 .number_of_particles_x8
@@ -5118,8 +5118,8 @@ equb $FF			; 11111111 15 15
 .create_jetpack_thrust
     LDA acceleration_x
     ORA acceleration_y
-    BEQ L1F91	  ; leave if we're not accelerating (??why not the RTS
-		  ; immediately below??)
+    BEQ L1F91     ; leave if we're not accelerating (??why not the RTS
+                  ; immediately below??)
     LDA #$ED
     LDY this_object_sprite
     CPY #$02
@@ -5127,12 +5127,12 @@ equb $FF			; 11111111 15 15
     LDA #$EB
 .L1F4D
     STA particle_flags_table+particles_jetpack_thrust ; for jetpack
-						      ; thrust - set
-						      ; flags to &ed
-						      ; or &eb
-						      ; depending on
-						      ; orientation of
-						      ; player
+                                                      ; thrust - set
+                                                      ; flags to &ed
+                                                      ; or &eb
+                                                      ; depending on
+                                                      ; orientation of
+                                                      ; player
     LDY #$0B ; &0b = jetpack thrust particles
     JSR add_particle                            ; jetpack thrust
     LDA #$FF
@@ -5161,20 +5161,20 @@ equb $FF			; 11111111 15 15
     STA zp_various_9c
     LDA screen_offset_h
     LSR A
-    ROR zp_various_9c		; screen_offset/2
+    ROR zp_various_9c           ; screen_offset/2
     LSR A
-    ROR zp_various_9c		; screen_offset/4
+    ROR zp_various_9c           ; screen_offset/4
     LSR A
-    ROR zp_various_9c		; screen_offset/8
-    ADC #screen_base_page>>3	; ($6000+screen_offset)/8
+    ROR zp_various_9c           ; screen_offset/8
+    ADC #screen_base_page>>3    ; ($6000+screen_offset)/8
     ; set 6845 address
     LDY #12
-    STY $FE00			; set r12
+    STY $FE00                   ; set r12
     STA $FE01
     LDA zp_various_9c
     INY
-    STY $FE00			; set r13
-    STA $FE01			
+    STY $FE00                   ; set r13
+    STA $FE01                   
     PLP
 }
 .L1F91
@@ -5234,23 +5234,23 @@ equb $FF			; 11111111 15 15
 .plot_pixel
 ; divide by 8 to get screen character row
 
-    LDA pixel_y_low	  ; calculate the screen address for the pixel
+    LDA pixel_y_low       ; calculate the screen address for the pixel
 
     LSR pixel_y
-    ROR A			; Y/2
+    ROR A                       ; Y/2
     LSR pixel_y
-    ROR A			; Y/4
+    ROR A                       ; Y/4
     LSR pixel_y
-    ROR A			; Y/8
+    ROR A                       ; Y/8
     TAX
     AND #$07
-    TAY				; Y=line in character row
+    TAY                         ; Y=line in character row
     LDA pixel_x_low
     AND #%11100000
     ADC screen_start_square_x_low_copy
     STA screen_address
-    TXA				; get Y coordinate
-    AND #%11111000		; 
+    TXA                         ; get Y coordinate
+    AND #%11111000              ; 
     EOR pixel_x
     ADC some_screen_address_offset
     ROR A
@@ -5291,7 +5291,7 @@ equb $FF			; 11111111 15 15
     STA velocity_signs_OR_pixel_colour
 .plot_particle_in_2
     SEC
-    LDA particle_stack_x_low,X	  ; get particle X
+    LDA particle_stack_x_low,X    ; get particle X
     SBC screen_start_square_x_low ; 
     STA pixel_x_low
     LDA particle_stack_x,X
@@ -5343,11 +5343,11 @@ ENDIF
     RTS
 .particle_evolution
     LDX number_of_particles
-    BMI L207D			; leave if no particles
-    LDA #$38			; SEC
-    STA L2122			; &2122 = SEC
-    LDA #$4C			; JMP $xxxx
-    STA L215A			; &215a = JMP &2122
+    BMI L207D                   ; leave if no particles
+    LDA #$38                    ; SEC
+    STA L2122                   ; &2122 = SEC
+    LDA #$4C                    ; JMP $xxxx
+    STA L215A                   ; &215a = JMP &2122
     LDA screen_start_square_x
     JSR get_water_level_for_x
     LDX number_of_particles_x8
@@ -5434,9 +5434,9 @@ ENDIF
     BCC L212C
     JMP L2095
 .L212C
-    LDA #$60			; RTS
-    STA L2122			; &2122 = RTS
-    STA L215A			; &215a = RTS
+    LDA #$60                    ; RTS
+    STA L2122                   ; &2122 = RTS
+    STA L215A                   ; &215a = RTS
     RTS
 .L2135
     JSR plot_particle_in_2
@@ -5969,7 +5969,7 @@ IF SRAM
     jsr increment_timers
     and #3
     tax
-    inx				; 1,2,3,4 - various sounds of pain
+    inx                         ; 1,2,3,4 - various sounds of pain
     jsr smp_play
 ELSE
     JSR play_sound
@@ -6202,8 +6202,8 @@ ENDIF
     ORA #$5A
     LDY #$02
     SEI
-    STY $FE00			; set r2
-    STA $FE01			
+    STY $FE00                   ; set r2
+    STA $FE01                   
     CLI
     LDY #$00
     BEQ L2619
@@ -8437,7 +8437,7 @@ ENDIF
 .player_can_move
     equb $FF
 .allow_screen_redrawing
-    equb $FF			; apparently constant
+    equb $FF                    ; apparently constant
 .scroll_square_offset_x_low
     equb $00,$E0
 .scroll_square_offset_x
@@ -8611,20 +8611,20 @@ ENDIF
 
 .redraw_screen
     LDA allow_screen_redrawing ; should we redraw the screen? (constant)
-    BPL L3683		       ; if not, leave
+    BPL L3683                  ; if not, leave
     LDA scroll_x_direction
     BEQ not_scrolling_x
 
 ; scrolling in X
 
     LDY scroll_square_x_velocity_high
-    INY				; Y = &00 left, Y = &01 right
+    INY                         ; Y = &00 left, Y = &01 right
     LDA scroll_square_offset_x_low,Y
     CLC
     ADC screen_start_square_x_low
     LDA scroll_square_offset_x,Y
     ADC screen_start_square_x
-    STA square_x	   ; find the square on the edge of the screen
+    STA square_x           ; find the square on the edge of the screen
     LDA screen_start_square_y
     STA square_y
     LDA scroll_square_x_velocity_low
@@ -8632,7 +8632,7 @@ ENDIF
     JSR make_positive
     LSR A
     LSR A
-    STA scroll_width		; get the width of the scrolled area
+    STA scroll_width            ; get the width of the scrolled area
 IF SRAM
     ldx #$21
 ELSE
@@ -8702,12 +8702,12 @@ ENDIF
     STA screen_address_two
     LDA screen_offset_h
     ADC scroll_screen_address_offsets,Y
-    AND #screen_size_pages-1	; ok
-    ORA #screen_base_page	; ok
+    AND #screen_size_pages-1    ; ok
+    ORA #screen_base_page       ; ok
     STA screen_address_two_h
     LDA scroll_y_direction
     JSR make_positive
-    STA scroll_height		; get the height of the scrolled area
+    STA scroll_height           ; get the height of the scrolled area
 .L3719
     LDA screen_address_two_h
     STA screen_address+1
@@ -9788,24 +9788,24 @@ IF SRAM
     PHP 
     TYA 
     PHA 
-    CPX smp_current_sound	; compare to existing sound being
-				; played, if any
-    BCS M3EC7			; branch taken if new sound id is g/e
-				; (so I guess sound ID encodes
-				; priority too...)
+    CPX smp_current_sound       ; compare to existing sound being
+                                ; played, if any
+    BCS M3EC7                   ; branch taken if new sound id is g/e
+                                ; (so I guess sound ID encodes
+                                ; priority too...)
     JSR get_object_distance_from_screen_centre
     CMP #$20
-    BCS M3EC7			; cull by distance - branch taken if
-				; object is too far away
-    LSR A			; scale to 0-15 to get volume - 0
-				; (near)=max, 15 (far)=silence
-    ORA #$90			; mask in sound chip command: set tone
-				; 3 volume
-    STA smp_default_volume_cmd	; save this
-    STX smp_current_sound	; save playing sound id
+    BCS M3EC7                   ; cull by distance - branch taken if
+                                ; object is too far away
+    LSR A                       ; scale to 0-15 to get volume - 0
+                                ; (near)=max, 15 (far)=silence
+    ORA #$90                    ; mask in sound chip command: set tone
+                                ; 3 volume
+    STA smp_default_volume_cmd  ; save this
+    STX smp_current_sound       ; save playing sound id
     TXA 
-    ASL A			; sound id * 2
-    TAX 			; X = sound id * 2
+    ASL A                       ; sound id * 2
+    TAX                         ; X = sound id * 2
     SEI
 
 ;; book channel 3 for the sample playback
@@ -9828,16 +9828,16 @@ IF SRAM
 
 ;; set up user VIA
 
-    LDA #%11000000		; enable T1
-    STA $FE6E			; enable user VIA T1
+    LDA #%11000000              ; enable T1
+    STA $FE6E                   ; enable user VIA T1
 
 ;; a frequency of 1 sets the chip constantly outputting +1 on that
 ;; channel - the volume is then be tweaked to get the desired
 ;; waveform. It's only 1 byte to change the volume.
 
-    LDA #$81			; tone 3 frequency = xxxxxx001
+    LDA #$81                    ; tone 3 frequency = xxxxxx001
     JSR push_sound_to_chip
-    LDA #$00			; tone 3 frequency = 000000001
+    LDA #$00                    ; tone 3 frequency = 000000001
     JSR push_sound_to_chip
 
 ;; set T1 to $0001 to get an IRQ just after the PHP below.
@@ -9846,7 +9846,7 @@ IF SRAM
     STX $FE64
     DEX 
     STX $FE65
-    JSR smp_prepare_byte			; get first sample data byte
+    JSR smp_prepare_byte                        ; get first sample data byte
  .M3EC7
     PLA
     TAY
@@ -9897,60 +9897,60 @@ IF SRAM
 
 .smp_next_byte
     BIT game_paused
-    BPL smp_prepare_byte	; taken if game paused
-    BIT smp_do_low_nybble		; do next nybble, or advance to next byte
-    BMI smp_low_nybble			; branch taken if doing next nybble
+    BPL smp_prepare_byte        ; taken if game paused
+    BIT smp_do_low_nybble               ; do next nybble, or advance to next byte
+    BMI smp_low_nybble                  ; branch taken if doing next nybble
     
 ;; fetch next byte of data with preincrement
 
     INC smp_prepare_byte+1
     BNE smp_prepare_byte
     INC smp_prepare_byte+2
-.smp_prepare_byte LDA $8100	; filled in with actual address of next byte
+.smp_prepare_byte LDA $8100     ; filled in with actual address of next byte
 
-    BEQ smp_playback_done	; if data byte was 0, sample is done
-    STA smp_byte		; save data byte
-    AND #$0F			; get low nybble
+    BEQ smp_playback_done       ; if data byte was 0, sample is done
+    STA smp_byte                ; save data byte
+    AND #$0F                    ; get low nybble
     CMP #$0F
-    LDA smp_byte		; get data byte
-    BCS smp_silence		; taken if low nybble 15 - it's
-				; silence, and entire data byte is the
-				; delay
+    LDA smp_byte                ; get data byte
+    BCS smp_silence             ; taken if low nybble 15 - it's
+                                ; silence, and entire data byte is the
+                                ; delay
 
 ;; get high nybble
 
-    LSR A			; >>1
-    LSR A			; >>2
-    LSR A			; >>3
-    LSR A			; >>4
-    BEQ smp_low_nybble		; taken if high nybble is 0
+    LSR A                       ; >>1
+    LSR A                       ; >>2
+    LSR A                       ; >>3
+    LSR A                       ; >>4
+    BEQ smp_low_nybble          ; taken if high nybble is 0
 
 ;; (data&15)<15&&(data&0xf0)!=0
 
     SEC 
-    ROR smp_do_low_nybble	; do low nybble next time
+    ROR smp_do_low_nybble       ; do low nybble next time
     
 .smp_silence
-    LDY #$9F			; silence (tone 3 volume = %1111)
-    JMP M3F0F			; tut... why not BNE?
+    LDY #$9F                    ; silence (tone 3 volume = %1111)
+    JMP M3F0F                   ; tut... why not BNE?
     
 .smp_low_nybble
-    LDA smp_byte		; get data byte
-    AND #$0F			; get bottom 4 bits
-    LSR smp_do_low_nybble	; fetch a new byte next time
-    LDY smp_default_volume_cmd	; get volume command to use
+    LDA smp_byte                ; get data byte
+    AND #$0F                    ; get bottom 4 bits
+    LSR smp_do_low_nybble       ; fetch a new byte next time
+    LDY smp_default_volume_cmd  ; get volume command to use
 .M3F0F
-    STA smp_next_delay		; 
-    BIT volume			; sound on?
-    BMI M3F19			; taken if so
-    LDY #$9F			; volume command = silence
+    STA smp_next_delay          ; 
+    BIT volume                  ; sound on?
+    BMI M3F19                   ; taken if so
+    LDY #$9F                    ; volume command = silence
 .M3F19
-    STY smp_next_volume_cmd	; save volume command
+    STY smp_next_volume_cmd     ; save volume command
     RTS
     
 .smp_playback_done
-    LDA #$7F			; disable all user VIA interrupts
-    STA $FE6E			; disable all user VIA interrupts
+    LDA #$7F                    ; disable all user VIA interrupts
+    STA $FE6E                   ; disable all user VIA interrupts
 
 ;; back to 3 channels again
 
@@ -11421,8 +11421,8 @@ ENDIF
     LDX this_object_type
     LDA bullet_particle_colour_table-first_bullet_type,X
     STA particle_colour_table+particles_icer ; set the particle colour to match bullet
-    LDY #particles_icer			     ; &2c = bullet particles
-    JMP add_particle			     ; create particle
+    LDY #particles_icer                      ; &2c = bullet particles
+    JMP add_particle                         ; create particle
 ;;       13 14 15 16 - icer bullet, tracer bullet, cannonball, blue death ball
 .bullet_particle_colour_table
     equb $02,$04,$08,$08
@@ -11614,7 +11614,7 @@ ENDIF
     LSR A
     BNE L4815 ; once every &80 cycles
 IF SRAM
-    ldx #6			; ALIEN DIE
+    ldx #6                      ; ALIEN DIE
     jsr smp_play
 ELSE
     JSR play_sound                                  ; make a noise
@@ -11660,7 +11660,7 @@ ENDIF
     LSR A
     BNE L485F
 IF SRAM
-    ldx #5			; DESTROY
+    ldx #5                      ; DESTROY
     jsr smp_play
 ELSE
     JSR play_sound
@@ -11919,7 +11919,7 @@ IF SRAM
     beq M4B4F
     inc M4B41+1
     bne M4B4F
-    ldx #0			; welcome to the land of the exile
+    ldx #0                      ; welcome to the land of the exile
     jsr smp_play
 .M4B4F
 ENDIF
@@ -13160,15 +13160,15 @@ equb $16,$16,$16,$16,$16,$16,$16,$16,$06,$06,$06,$06
 .intro1
     LDA #$01
     LDX #$28
-    STA $FE00			; r1=40
+    STA $FE00                   ; r1=40
     STX $FE01 
     LDA #$0C
     LDX #$28
-    STA $FE00 			; r12=$28 ($7c00 Mode 7)
+    STA $FE00                   ; r12=$28 ($7c00 Mode 7)
     STX $FE01 
     LDA #$0D
     LDX #$00
-    STA $FE00 			; R13=$28 ($7c00 Mode 7)
+    STA $FE00                   ; R13=$28 ($7c00 Mode 7)
     STX $FE01 
     LDX #$83
     LDY #$FC
@@ -13260,7 +13260,7 @@ equb $16,$16,$16,$16,$16,$16,$16,$16,$06,$06,$06,$06
     LDA #$7F
     STA $FE4E ; system VIA interrupt enable register
     STA $FE6E ; user VIA interrupt enable register
-    LDA #%11000010		; T1 + CA1(vsync)
+    LDA #%11000010              ; T1 + CA1(vsync)
     STA $FE4E ; system VIA interrupt enable register
     LDX #$0A
     LDY #$09
@@ -13279,22 +13279,22 @@ IF SRAM
     equb $00
 ENDIF
 .crtc_data
-equb $14			; ula
-equb $7F			; r0
-equb $00			; r1
-;equb $5B			; r2
+equb $14                        ; ula
+equb $7F                        ; r0
+equb $00                        ; r1
+;equb $5B                       ; r2
 equb 98-(80-screen_width) DIV 2+1
-equb $28			; r3
-equb $26			; r4
-equb $00			; r5
+equb $28                        ; r3
+equb $26                        ; r4
+equb $00                        ; r5
 equb (screen_size_pages*256)/(screen_width*8) ; r6
 IF SRAM
-equb $23			; r7
+equb $23                        ; r7
 ELSE
-equb $1B			; r7
+equb $1B                        ; r7
 ENDIF
-equb $00			; r8
-equb $07			; r9
+equb $00                        ; r8
+equb $07                        ; r9
 .main_end
 
 IF SRAM
@@ -13343,9 +13343,9 @@ ENDIF
     STA intro_three
     LDY #$FF
 .L7230
-lda $67e,Y			; presumably $67e is where EXILEL
-				; leaves the save data
-.L7233					  
+lda $67e,Y                      ; presumably $67e is where EXILEL
+                                ; leaves the save data
+.L7233                                    
 sta background_objects_type+5-base_address+load_address,Y ; $1b76
     DEY
     CPY #$FF
@@ -13411,7 +13411,7 @@ IF SRAM
     dey
     bne M7739
 .M773F
-    lda sram_ram_end,Y		; the files are concatenated...
+    lda sram_ram_end,Y          ; the files are concatenated...
 .M7742
     sta sram_rom_begin,Y
     iny
