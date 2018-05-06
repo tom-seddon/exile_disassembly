@@ -335,6 +335,7 @@ ENDIF
 .unused_BRKV
     equb $AA,$AA
     IF P%<>$204:ERROR "IRQ1V in wrong place":ENDIF
+;; IRQ1V - Main interrupt vector
     equw irq_routine
 ;;  tables used in particle generation
 ;; 
@@ -355,6 +356,7 @@ ENDIF
 ;;        6  7  8  9  a  b  c  d  e  f  0
 ;;        life   vel   col  f  x  y xv yv
 ;;        r     r        r     r  r  r  r
+
 .particle_tables
     equb $0F,$1E,$0F,$0A,$91,$02,$A0,$1F,$1F,$03,$03; + &00 # plasma ball
     equb $0F,$03,$0F,$18,$86,$01,$ED,$00,$00,$03,$03; + &0b # jetpack thrust
@@ -399,7 +401,141 @@ particles_flask=8*11
 particles_wind=9*11
 particles_unused=10*11
 
+;; ##############################################################################
+;; 
+;;    Object handlers
+;;    ===============
+;;    background objects:
+;;    no   l   h    addr  name                                    object created          80 40 20 10
+;;    &00  &d7 &20  3ef2 handle_background_invisible_switch                               -  -  +  -
+;;    &01  &c8 &b0  3ee3 handle_background_teleport_beam        teleport beam           +  -  +  +
+;;    &02  &a4 &91  3fbf handle_background_object_from_data     (use object_data & &7f) +  -  -  +
+;;    &03  &7d &f0  3e98 handle_background_door                 door                    +  +  +  +
+;;    &04  &7a &f0  3e95 handle_background_stone_door           stone door              +  +  +  +
+;;    &05  &9c &b1  3fb7 handle_background_object_from_type     (use object_type)       +  -  +  +
+;;    &06  &9c &b1  3fb7 handle_background_object_from_type     (use object_type)       +  -  +  +
+;;    &07  &9c &b1  3fb7 handle_background_object_from_type     (use object_type)       +  -  +  +
+;;    &08  &b2 &b1  3fcd handle_background_switch                       switch                  +  -  +  +
+;;    &09  &00 &b0  3e1b handle_background_object_emerging      (use object_type)       +  -  +  +
+;;    &0a  &00 &b0  3e1b handle_background_object_emerging      (use object_type)       +  -  +  +
+;;    &0b  &26 &31  3f41 handle_background_object_fixed_wind                              -  -  +  +
+;;    &0c  &6f &90  3e8a handle_background_engine_thruster      engine thruster         +  -  -  +
+;;    &0d  &88 &31  3fa3 handle_background_object_water                                   -  -  +  +
+;;    &0e  &fd &30  3f18 handle_background_object_random_wind                             -  -  +  +
+;;    &0f  &b7 &31  3fd2 handle_background_mushrooms            mushroom ball           -  -  +  +
+;;    &10  &7b &02  4096 handle_explosion_type_00
+;;    &11  &a3 &02  40be handle_explosion_type_40
+;;    &12  &a0 &02  40bb handle_explosion_type_80
+;;    &13  &aa &02  40c5 handle_explosion_type_c0
+;; 
+;;    stack objects:
+;;  r no   l   h    addr  name                        object
+;;  0:&00  &f6 &0b  &4a11 handle_player_object          player
+;;    &01  &bc &0a  &48d7 handle_chatter_active         active chatter
+;;    &02  &d5 &88  &46f0 handle_crew_member            pericles crew member
+;;    &03  &6d &84  &4288 handle_fluffy                 fluffy
+;;  1:&04  &94 &cd  &4baf handle_nest                   small nest
+;;    &05  &94 &cd  &4baf handle_nest                   big nest
+;;  2:&06  &48 &86  &4463 handle_frogman_red            red frogman
+;;    &07  &5c &86  &4477 handle_frogman_green          green frogman
+;;    &08  &5a &86  &4475 handle_frogman_cyan           cyan frogman
+;;    &09  &ae &09  &47c9 handle_red_slime              red slime
+;;    &0a  &0f &04  &422a handle_green_slime            green slime
+;;    &0b  &4b &04  &4266 handle_yellow_ball            yellow ball
+;;    &0c  &6e &09  &4789 handle_sucker                 sucker
+;;    &0d  &d2 &0f  &4ded handle_sucker_deadly          deadly sucker
+;;    &0e  &46 &89  &4761 handle_big_fish               big fish
+;;  3:&0f  &ef &83  &420a handle_worm                   worm
+;;    &10  &06 &d1  &4f21 handle_nest_dweller           pirahna
+;;    &11  &06 &91  &4f21 handle_nest_dweller           wasp
+;;  4:&12  &dc &c4  &42f7 handle_grenade_active         active grenade
+;;    &13  &a4 &c8  &46bf handle_icer_bullet            icer bullet
+;;    &14  &f9 &c7  &4614 handle_tracer_bullet          tracer bullet
+;;    &15  &0b &c5  &4326 handle_cannonball           cannonball
+;;    &16  &17 &c5  &4332 handle_death_ball_blue        blue death ball
+;;    &17  &2f &c5  &434a handle_red_bullet             red bullet
+;;    &18  &00 &c6  &441b handle_pistol_bullet          pistol bullet
+;;    &19  &6d &8c  &4a88 handle_plasma_ball            plasma ball
+;;    &1a  &cc &45  &43e7 handle_hover_ball             hover ball
+;;    &1b  &d0 &45  &43eb handle_hover_ball_invisible   invisible hover ball
+;;  5:&1c  &c3 &50  &4ede handle_robot                  magenta robot
+;;    &1d  &c3 &50  &4ede handle_robot                  red robot
+;;    &1e  &c7 &50  &4ee2 handle_robot_blue             blue robot
+;;    &1f  &bd &50  &4ed8 handle_turret                 green/white turret
+;;    &20  &bd &50  &4ed8 handle_turret                 cyan/red turret
+;;    &21  &e9 &49  &4804 handle_hovering_robot         hovering robot
+;;  6:&22  &04 &4a  &481f handle_clawed_robot           magenta clawed robot
+;;    &23  &04 &4a  &481f handle_clawed_robot           cyan clawed robot
+;;    &24  &04 &4a  &481f handle_clawed_robot           green clawed robot
+;;    &25  &04 &4a  &481f handle_clawed_robot           red clawed robot
+;;    &26  &e9 &08  &4704 handle_triax                  triax
+;;    &27  &37 &90  &4e52 handle_maggot                 maggot
+;;    &28  &55 &c3  &4170 handle_gargoyle               gargoyle
+;;    &29  &d4 &86  &44ef handle_imp                    red/magenta imp
+;;    &2a  &d4 &86  &44ef handle_imp                    red/yellow imp
+;;    &2b  &d4 &86  &44ef handle_imp                    blue/cyan imp
+;;    &2c  &d4 &86  &44ef handle_imp                    cyan/yellow imp
+;;    &2d  &d4 &86  &44ef handle_imp                    red/cyan imp
+;;    &2e  &16 &88  &4631 handle_bird                   green/yellow bird
+;;    &2f  &16 &88  &4631 handle_bird                   white/yellow bird
+;;    &30  &06 &88  &4621 handle_bird_red               red/magenta bird
+;;    &31  &10 &88  &462b handle_bird_invisible         invisible bird
+;;  7:&32  &e6 &02  &4000 handle_lightning              lightning
+;;    &33  &7d &08  &4698 handle_mushroom_ball          red mushroom ball
+;;    &34  &7d &08  &4698 handle_mushroom_ball          blue mushroom ball
+;;    &35  &76 &09  &4791 handle_engine_fire            engine fire
+;;    &36  &7e &c9  &4799 handle_red_drop               red drop
+;;    &37  &bb &0c  &4ad6 handle_fireball               fireball
+;;  8:&38  &a6 &0a  &48c1 handle_chatter_inactive       inactive chatter
+;;    &39  &0b &0d  &4b26 handle_moving_fireball        moving fireball
+;;    &3a  &81 &05  &439c handle_giant_wall             giant wall
+;;    &3b  &fa &0d  &4c15 handle_engine_thruster        engine thruster
+;;    &3c  &68 &ce  &4c83 handle_door                   horizontal door
+;;    &3d  &68 &ce  &4c83 handle_door                   vertical door
+;;    &3e  &68 &ce  &4c83 handle_door                   horizontal stone door
+;;    &3f  &68 &ce  &4c83 handle_door                   vertical stone door
+;;    &40  &8e &0d  &4ba9 handle_bush                   bush
+;;    &41  &6b &0f  &4d86 handle_teleport_beam          teleport beam
+;;    &42  &82 &cb  &499d handle_switch                 switch
+;;    &43  &92 &05  &43ad (null function)               chest
+;;    &44  &81 &11  &4f9c handle_explosion              explosion
+;;    &45  &92 &05  &43ad (null function)               rock
+;;    &46  &d3 &02  &40ee handle_cannon                 cannon
+;;    &47  &fb &43  &4216 handle_mysterious_weapon      mysterious weapon
+;;    &48  &84 &03  &419f handle_maggot_machine         maggot machine
+;;    &49  &49 &0d  &4b64 handle_placeholder            placeholder
+;;  9:&4a  &59 &05  &4374 handle_destinator             destinator
+;;    &4b  &45 &85  &4360 handle_energy_capsule         energy capsule
+;;    &4c  &8c &05  &43a7 handle_flask                  empty flask
+;;    &4d  &93 &05  &43ae handle_flask_full             full flask
+;;    &4e  &36 &05  &4351 handle_remote_control         remote control device
+;;    &4f  &36 &05  &4351 handle_remote_control         cannon control device
+;;    &50  &3d &c3  &4158 handle_grenade_inactive       inactive grenade
+;;    &51  &6d &0d  &4b88 handle_collectable            cyan/yellow/green key
+;;    &52  &6d &0d  &4b88 handle_collectable            red/yellow/green key
+;;    &53  &6d &0d  &4b88 handle_collectable            green/yellow/red key
+;;    &54  &6d &0d  &4b88 handle_collectable            yellow/white/red key
+;;    &55  &af &03  &41ca handle_coronium_boulder       coronium boulder
+;;    &56  &6d &0d  &4b88 handle_collectable            red/magenta/red key
+;;    &57  &6d &0d  &4b88 handle_collectable            blue/cyan/green key
+;;    &58  &a7 &03  &41c2 handle_coronium_crystal       coronium crystal
+;;    &59  &6d &0d  &4b88 handle_collectable            jetpack booster
+;;    &5a  &6d &0d  &4b88 handle_collectable            pistol
+;;    &5b  &6d &0d  &4b88 handle_collectable            icer
+;;    &5c  &6d &0d  &4b88 handle_collectable            discharge device
+;;    &5d  &6d &0d  &4b88 handle_collectable            plasma gun
+;;    &5e  &6d &0d  &4b88 handle_collectable            protection suit
+;;    &5f  &6d &0d  &4b88 handle_collectable            fire immunity device
+;;    &60  &6d &0d  &4b88 handle_collectable            mushroom immunity pull
+;;    &61  &6d &0d  &4b88 handle_collectable            whistle 1
+;;    &62  &6d &0d  &4b88 handle_collectable            whistle 2
+;;    &63  &6d &0d  &4b88 handle_collectable            radiation immunity pull
+;;    &64  &92 &05  &43ad (null function)               ?
+;; 
+;; ##############################################################################
+
 .object_sprite_lookup
+    ;;   0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
     equb $04,$14,$04,$75,$1E,$1B,$10,$10,$10,$1C,$1C,$20,$70,$70,$61,$52; 00
     equb $72,$4F,$21,$08,$08,$21,$21,$08,$08,$21,$78,$78,$13,$13,$13,$5E; 10
     equb $5E,$15,$16,$16,$16,$16,$04,$52,$45,$64,$64,$64,$64,$64,$59,$59; 20
@@ -407,6 +543,10 @@ particles_unused=10*11
     equb $1A,$71,$2E,$5D,$17,$20,$56,$57,$47,$22,$60,$7B,$76,$76,$58,$58; 40
     equb $21,$4D,$4D,$4D,$4D,$20,$4D,$4D,$22,$6B,$6C,$6C,$79,$6C,$04,$7A; 50
     equb $63,$7C,$7C,$79,$77; 60
+.object_palette_lookup
+    ;;  & &80 = can be picked up
+    ;;  & &7f = palette
+    ;;   0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
     equb $3E,$1B,$2E,$F2,$32,$32,$53,$05,$0F,$14,$29,$BC,$65,$65,$F7,$97; 00
     equb $D3,$C7,$EF,$7E,$5F,$3C,$5A,$11,$2D,$34,$E1,$80,$55,$1B,$4C,$59; 10
     equb $23,$72,$2E,$7B,$77,$33,$39,$8B,$44,$51,$0D,$46,$2B,$53,$35,$3C; 20
@@ -415,6 +555,9 @@ particles_unused=10*11
     equb $EF,$AB,$AD,$95,$9C,$91,$92,$A6,$91,$B1,$8E,$E0,$A2,$B5,$B3,$E3; 50
     equb $D5,$E3,$D7,$F0,$F1; 60
 .object_gravity_flags
+    ;;  & &80 = doesn't collide with other objects
+    ;;  & &07 = weight; 01 = light, 06 = heavy, 07 = static
+    ;;   0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
     equb $03,$23,$23,$22,$77,$77,$26,$6D,$6E,$F7,$6E,$25,$F7,$F7,$25,$69; 00
     equb $6B,$68,$04,$63,$66,$66,$65,$66,$62,$64,$69,$69,$24,$25,$26,$77; 10
     equb $77,$23,$05,$05,$05,$05,$04,$68,$77,$6A,$6C,$6B,$6B,$6C,$6C,$6C; 20
@@ -423,6 +566,7 @@ particles_unused=10*11
     equb $24,$23,$23,$23,$23,$25,$23,$23,$02,$26,$23,$23,$23,$23,$26,$25; 50
     equb $22,$22,$22,$25,$E7; 60
 .object_handler_table
+    ;; for background objects / explosions
     equb LO(handle_background_invisible_switch-handlers_start)
     equb LO(handle_background_teleport_beam-handlers_start)
     equb LO(handle_background_object_from_data-handlers_start)
@@ -545,6 +689,8 @@ particles_unused=10*11
     equb LO(handle_collectable-handlers_start)
     equb LO(L43AD-handlers_start)
 .object_handler_table_h
+    ;;  & &c0 = how the object explodes
+    ;; for background objects / explosions
     equb HI(handle_background_invisible_switch-handlers_start) OR (1<<5)
     equb HI(handle_background_teleport_beam-handlers_start) OR (1<<7) OR (1<<5) OR (1<<4)
     equb HI(handle_background_object_from_data-handlers_start) OR (1<<7) OR (1<<4)
@@ -666,27 +812,113 @@ particles_unused=10*11
     equb HI(handle_collectable-handlers_start)
     equb HI(handle_collectable-handlers_start)
     equb HI(L43AD-handlers_start)
+
+;; ##############################################################################
+;; 
+;;    Background sprites
+;;    ==================
+;; 
+;;    00 = bottom left, unflipped
+;;    40 = top left, vertical flip
+;;    80 = bottom right, horizontal flip
+;;    c0 = top right, vertical & horizontal flip
+;; 
+;;    00 = bush
+;;    01 = stone \ wall, filled in bottom left
+;;    02 = turret, top, facing left
+;;    03 = door, horizontal, top
+;;    04 = brick wall, solid
+;;    05 = brick wall, 3/4 full, \, filled in bottom left
+;;    06 = brick wall, \, starting top left, ending middle right
+;;    07 = stone wall, bottom edging
+;;    08 = nothing ?
+;;    09 = sucker, bottom
+;;    0a = big pipe entrance, bottom
+;;    0b = wind
+;;    0c = engine exhaust, \ filled in bottom left
+;;    0d = water
+;;    0e = mushrooms, bottom right corner
+;;    0f = mushrooms, bottom
+;;    10 = green stone wall, bottom edging
+;;    11 = green leaf, bottom left corner
+;;    12 = brick wall, solid
+;;    13 = brick wall, \, starting top middle, ending middle right, 3/4 full
+;;    14 = spaceship pipework
+;;    15 = thin spaceship wall, left side
+;;    16 = thick spaceship wall, bottom edge
+;;    17 = thin spacewship wall, bottom edge
+;;    18 = flag? left side
+;;    19 = nothing ?
+;;    1a = half a bush, bottom left corner
+;;    1b = bush, bottom left corner
+;;    1c = spaceship tiny corner piece, bottom left
+;;    1d = spaceship 3/4 corner piece, bottom left
+;;    1e = brick wall, solid
+;;    1f = brick wall, bottom half
+;;    20 = horizontal brick door
+;;    21 = pillar, left edge
+;;    22 = green leaf, bottom left corner
+;;    23 = brick \ wall, filled in bottom left
+;;    24 = brick wall, \, starting top left, ending middle right
+;;    25 = brick wall, \, starting middle left, ending bottom right
+;;    26 = spaceship wall, \, starting top left, ending half top right
+;;    27 = spaceship wall, \, starting half top left, ending middle right
+;;    28 = spaceship wall, \, starting middle left, ending half bottom right
+;;    29 = spaceship wall, \, starting half bottom left, ending bottom left
+;;    2a = brick wall, \, very steep down
+;;    2b = couple of pixels of stone edging strip, bottom
+;;    2c = stone edge, bottom
+;;    2d = stone wall, solid
+;;    2e = stone \ wall, filled in bottom left
+;;    2f = stone \ wall, starting top left, ending middle right
+;;    30 = stone \ wall, starting middle left, ending bottom right
+;;    31 = stone - wall, filled bottom
+;;    32 = spaceship corner with pipes, filled
+;;    33 = pipe, bottom
+;;    34 = pipe, bottom left corner
+;;    35 = pipe, left
+;;    36 = spaceship - wall, filled bottom
+;;    37 = spaceship corner with pipes, filled
+;;    38 = spaceship pipes, half, filled bottom
+;;    39 = vertical brick door
+;;    3a = gargoyle, bottom left
+;;    3b = brick wall, 3/4 filled bottom
+;;    3c = big pipe entrance, bottom
+;;    3d = spaceship support
+;;    3e = computer console, bottom left
+;;    3f = hydraulic leg
+;; 
+;; ##############################################################################
+
 .background_sprite_lookup
+;;  & &7f = sprite
+;;  & &80 = vertically flipped
+;;       0   1    2  3   4   5   6   7   8   9   a   b   c   d   e   f
     equb $C6,$CE,$C6,$C6,$C6,$BB,$C6,$18,$2D,$70,$6A,$C6,$23,$39,$C6,$62
     equb $C0,$8E,$39,$44,$47,$26,$48,$49,$DF,$C6,$99,$9A,$25,$2B,$39,$3B
     equb $3C,$55,$8E,$43,$34,$35,$27,$28,$29,$2A,$42,$BF,$40,$3D,$38,$36
     equb $37,$3E,$33,$31,$2F,$30,$2C,$24,$32,$41,$45,$3A,$6A,$23,$60,$CC
 .background_y_offset_lookup
+;;       0   1    2  3   4   5   6   7   8   9   a   b   c   d   e   f
     equb $00,$00,$00,$00,$00,$00,$00,$D0,$C5,$B0,$C7,$00,$06,$00,$00,$C0
     equb $B0,$A0,$07,$08,$00,$04,$80,$C0,$70,$00,$B0,$80,$99,$08,$00,$80
     equb $C0,$00,$A0,$03,$02,$82,$01,$41,$81,$C1,$04,$F0,$B0,$00,$03,$02
     equb $82,$70,$06,$C0,$C5,$04,$80,$06,$80,$04,$99,$30,$C7,$06,$A9,$00
 .background_palette_lookup
+;;       0   1    2  3   4   5   6   7   8   9   a   b   c   d   e   f
     equb $80,$02,$91,$91,$91,$00,$91,$A8,$DC,$B8,$8C,$80,$C9,$4A,$80,$06
     equb $88,$05,$04,$00,$02,$02,$02,$02,$02,$91,$03,$03,$02,$02,$00,$00
     equb $00,$BC,$B1,$00,$00,$00,$01,$01,$01,$01,$00,$04,$04,$04,$04,$04
     equb $04,$04,$02,$01,$01,$01,$02,$02,$02,$00,$00,$00,$82,$02,$64,$EE
 .background_wall_y_start_base_lookup
+;;       0   1    2  3   4   5   6   7   8   9   a   b   c   d   e   f
     equb $0F,$3A,$0F,$0F,$0F,$77,$0F,$F0,$B0,$F0,$C0,$0F,$00,$F0,$0F,$F0
     equb $0F,$0F,$00,$06,$0F,$00,$77,$B3,$0F,$0F,$0F,$0F,$90,$06,$0F,$77
     equb $B3,$F0,$0F,$10,$07,$70,$0B,$37,$73,$B0,$00,$0F,$B3,$0F,$10,$07
     equb $70,$77,$00,$B3,$B0,$00,$77,$00,$77,$00,$90,$2C,$C0,$00,$90,$0F
 .background_wall_y_start_lookup
+;;  Add &100 to get address in wall_base_y_lookup
+;;        --  -V  H-  HV
     equb $00,$00,$00,$00
     equb $08,$40,$40,$08
     equb $10,$48,$48,$10
@@ -700,6 +932,7 @@ particles_unused=10*11
 .background_objects_range_minus_one
     equb $00
 .background_objects_range
+;;  [TOM background_objects_range 1d was 19]
     equb $1D,$39,$57,$7A,$9E,$BC,$D8,$F6,$FE
 .background_objects_data_offset
     equb $01,$FE,$FB,$FA,$F8,$F5,$F5,$F3,$F3
@@ -742,7 +975,12 @@ particles_unused=10*11
 .background_strip_cache_orientation
     equb $2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E
 .background_strip_cache_sprite
+; 7f6
     equb $2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E,$2E
+
+;; 07f8 is where the game state data starts copying from
+;; 07f8 - 07fe : copy of &d9 - &df when saving position
+
 .game_time
     equb $00,$00,$00,$00
 .player_deaths
@@ -823,12 +1061,26 @@ particles_unused=10*11
 .current_weapon
     equb $00
 .weapon_energy
+;; 0 = jetpack, 1 = pistol, 2 = icer, 3 = discharge, 4 = plasma, 5 = suit
+;;        0   1   2   3   4   5 
     equb $00,$00,$00,$00,$00,$00
 .weapon_energy_h
     equb $30,$10,$10,$01,$08,$10
 .energy_per_shot
     equb $01,$06,$10,$FF,$32,$00
+
+;; ##############################################################################
+;; 
+;;    Object Stack (primary)
+;;    ======================
+;;    (&9b, &3b) &00 player
+;;    (&99, &3b) &26 triax
+;;    fourteen empty slots
+;; 
+;; ##############################################################################
+
 .object_stack_type
+;;  [TOM object_stack_type - 24 was 47]
     equb $00,$26,$D7,$57,$57,$57,$57,$D6,$D7,$57,$25,$82,$26,$25,$24,$77
 .object_stack_sprite
     equb $04,$04,$02,$22,$24,$22,$22,$24,$23,$23,$23,$23,$25,$23,$23,$02
@@ -845,6 +1097,7 @@ ENDIF
     equb     $65; eighteenth slot = waterfall (&65, &dc), for sound
     
 .object_stack_y_low
+;;  [TOM object_stack_y_low - 80 was 20]
 IF SRAM
     equb $80,$20,$a1,$48,$5C,$5A,$AE,$0F,$4B,$6E,$Df,$46,$EF,$13,$13,$DC
 ELSE
@@ -860,8 +1113,16 @@ ELSE
     equb $04,$DC
 ENDIF
 .object_stack_flags
+;;  80 set = horizontal invert (facing left)
+;;  40 set = vertical invert (upside down)
+;;  20 set = remove from display
+;;  10 set = teleporting
+;;  08 set = damaged
+;;  02 set = collision detected
+;;  01 set at load positon?
     equb $81,$11,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01
 .object_stack_palette
+;;  10 set = damaged
 IF SRAM
     equb $7E,$39,$A2,$18,$81,$07,$75,$75,$75,$75,$9b,$78,$7e,$92,$8e,$92
 ELSE
@@ -880,6 +1141,7 @@ ELSE
     equb $00,$10,$A7,$6D,$6D,$6D,$6D,$6D,$6D,$6D,$6D,$6D,$6D,$6D,$92,$20
 ENDIF
 .object_stack_target
+;;  [TOM object_stack_target - 02 was 20]
     equb $B0,$00,$F0,$F0,$B1,$B1,$B1,$B1,$B0,$B0,$31,$90,$31,$30,$31,$02
 .object_stack_tx
     equb $02,$99,$02,$0B,$0A,$88,$84,$CD,$CD,$86,$86,$86,$09,$04,$04,$09
@@ -888,6 +1150,7 @@ ENDIF
 .object_stack_ty
     equb $50,$3B,$50,$50,$49,$4A,$4A,$4A,$4A,$08,$90,$C3,$86,$86,$86,$86
 .object_stack_supporting
+;;  [TOM object_stack_supporting - c9 was 09]
     equb $86,$88,$88,$88,$88,$02,$08,$08,$09,$C9,$0C,$0A,$0D,$05
 IF SRAM
     equb                                                         $0E
@@ -901,447 +1164,7 @@ ENDIF
     equb $00,$05,$05,$C3,$0D,$0D,$0D,$0D,$03,$0D,$0D,$03,$0D,$0D,$0D,$0D
 .object_stack_extra
     equb $0D,$0D,$0D,$0D,$0D,$0D,$0D,$05,$C6,$CE,$C6,$C6,$C6,$BB,$C6,$18
-.background_objects_data
-    equb $00,$7C,$60,$04,$88,$88,$A0,$A6,$AE,$83,$86,$82,$80,$80,$AD,$81
-    equb $F7,$A1,$F1,$F7,$81,$8A,$AC,$D2,$DF,$D4,$A3,$84,$85,$AE,$80,$80
-    equb $88,$AC,$C4,$C0,$04,$A8,$C4,$BC,$FD,$81,$C1,$D1,$91,$F1,$F1,$DA
-    equb $F7,$F3,$D8,$88,$80,$83,$83,$B0,$AA,$80,$80,$87,$80,$30,$08,$10
-    equb $7C,$04,$10,$A8,$90,$04,$C1,$F1,$E1,$95,$BC,$B4,$FD,$A1,$D6,$DD
-    equb $E2,$04,$0C,$04,$20,$21,$A0,$B0,$AC,$83,$81,$84,$80,$C4,$85,$95
-    equb $A3,$B5,$F1,$AD,$C1,$81,$89,$A0,$C1,$F1,$F1,$C1,$8C,$A4,$E4,$D7
-    equb $9D,$E1,$A6,$81,$85,$83,$83,$D0,$A8,$04,$04,$D0,$88,$04,$04,$04
-    equb $08,$BD,$8A,$F1,$D1,$F1,$B1,$F1,$C1,$C1,$C1,$C1,$E2,$E4,$DC,$A0
-    equb $C2,$CB,$B8,$A8,$10,$98,$A0,$80,$83,$80,$80,$80,$80,$00,$C4,$40
-    equb $84,$28,$75,$BC,$F1,$D1,$A9,$F1,$C0,$C1,$8F,$94,$C2,$CA,$FA,$9C
-    equb $FE,$10,$14,$90,$98,$04,$A4,$80,$83,$C6,$C4,$FE,$AA,$90,$EC,$DC
-    equb $9E,$F4,$F7,$F1,$F1,$81,$F1,$F1,$B1,$DB,$9E,$84,$AC,$80,$80,$80
-    equb $80,$80,$80,$80,$C0,$04,$08,$90,$A2,$04,$04,$04,$20,$BC,$53,$9D
-    equb $84,$DA,$CB,$DE,$C5,$A5,$C1,$F1,$70,$D0,$80
-.background_objects_type
-    equb $00,$0F,$27,$2E,$07,$2F,$2D,$1F,$1F,$0D,$0D,$0D,$0C,$60,$2C,$00
-    equb $0D,$0D,$1F,$0D,$5C,$0D,$20,$05,$04,$06,$31,$05,$2A,$09,$0D,$0D
-    equb $1F,$20,$55,$55,$0D,$63,$0F,$2E,$0A,$1B,$37,$29,$1A,$1A,$37,$37
-    equb $0A,$37,$4B,$4B,$2D,$1F,$20,$0D,$0D,$28,$55,$05,$80,$00,$80,$80
-    equb $20,$28,$0D,$0D,$28,$27,$31,$0E,$08,$11,$39,$37,$37,$37,$2A,$80
-    equb $4A,$10,$2F,$30,$30,$09,$0D,$09,$09,$4F,$24,$4A,$04,$1A,$39,$10
-    equb $00,$4C,$0A,$2F,$29,$2C,$37,$20,$3A,$0D,$05,$05,$0D,$20,$0D,$0D
-    equb $48,$51,$0C,$55,$22,$04,$2E,$2F,$2B,$2A,$21,$02,$02,$1A,$80,$4B
-    equb $80
-.secondary_object_stack_x
-    equb $9B,$A3,$98,$98,$A4,$9F,$A0,$C0,$48,$83,$C5,$87,$97,$E1,$84,$98
-    equb $99,$E7,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-.secondary_object_stack_y
-    equb $39,$5D,$4D,$4D,$67,$49,$49,$4E,$56,$78,$60,$59,$5E,$61,$5B,$80
-    equb $3C,$80,$77,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-.secondary_object_stack_type
-    equb $64,$43,$50,$50,$59,$50,$46,$50,$50,$4E,$45,$53,$1D,$03,$50,$50
-    equb $4A,$3A,$4C,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-.possible_checksum
-    equb $DC
-.secondary_object_stack_energy_and_low
-    equb $F0,$F3,$71,$79,$FB,$42,$F5,$47,$F3,$F2,$F3,$F2,$F0,$FB,$F2,$40
-    equb $FB,$F0,$F1,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
-.secondary_stack_object_number
-    equb $00
-.secondary_stack_random_1f
-    equb $00
-.maybe_another_checksum
-    equb $43
-.consider_secondary_stack_objects
-    equb $00
-.secondary_stack_player_odometer
-    equb $00
-.sprite_and
-    equb $FF
-.palette_value_to_pixel_lookup
-equb $CA                        ; yellow bg, black bg
-equb $C9                        ; green bg, red bg
-equb $E3                        ; magenta bg, red bg
-equb $E9                        ; cyan bg, red bg
-equb $EB                        ; white bg, red bg
-equb $CE                        ; yellow bg, green bg
-equb $F8                        ; cyan bg, blue bg
-equb $E6                        ; magenta bg, green bg
-equb $CC                        ; green bg, green bg
-equb $EE                        ; white bg, green bg
-equb $30                        ; blue fg, blue fg
-equb $DE                        ; yellow bg, cyan bg
-equb $EF                        ; white bg, yellow bg
-equb $CB                        ; yellow bg, red bg
-equb $FB                        ; white bg, magenta bg
-equb $FE                        ; white bg, cyan bg
-        
-.plot_sprite_screen_location_offsets_low
-    equb $00
-    equb $EA
-    equb $00
-    equb $EA
-.plot_sprite_screen_location_offsets
-    equb $00
-    equb $EA
-    equb $00
-    equb $EA
-.screen_offset_x_low
-    equb $EA
-.screen_offset_x_low_old
-    equb $EA
-.screen_offset_y_low
-    equb $EA
-.screen_offset_y_low_old
-    equb $EA
-.screen_offset_x
-    equb $EA
-.screen_offset_x_old
-    equb $EA
-.screen_offset_y
-    equb $EA
-.screen_offset_y_old
-    equb $EA
-.plot_sprite_screen_address_offsets_low
-    equb $00
-    equb $EA
-    equb $00
-    equb $EA
-.plot_sprite_screen_address_offsets
-    equb $08
-    equb $EA
-IF SRAM
-    equb 8
-ELSE
-    equb $04
-ENDIF
-    equb $EA
-.used_in_redraw_0ba1
-    equb $F0
-    equb $F0
-    equb $F8
-    equb $F8
-.plot_sprite_when_to_flags_and
-    equb $05
-    equb $0A
-    equb $00
-    equb $00
-;; IRQ1V - Main interrupt vector
-;; + &00 # plasma ball
-;; + &0b # jetpack thrust
-;; + &16 # explosion
-;; + &21 # fireball
-;; + &2c # icer
-;; + &37 # engine thruster
-;; + &42 # gun aim
-;; + &4d # stars / mushroom ball
-;; + &58 # flask
-;; + &63 # water splashes
-;; + &6e # wind
-;; + &79 # (unused)
-;; ##############################################################################
-;; 
-;;    Object handlers
-;;    ===============
-;;    background objects:
-;;    no   l   h    addr  name                                    object created          80 40 20 10
-;;    &00  &d7 &20  3ef2 handle_background_invisible_switch                               -  -  +  -
-;;    &01  &c8 &b0  3ee3 handle_background_teleport_beam        teleport beam           +  -  +  +
-;;    &02  &a4 &91  3fbf handle_background_object_from_data     (use object_data & &7f) +  -  -  +
-;;    &03  &7d &f0  3e98 handle_background_door                 door                    +  +  +  +
-;;    &04  &7a &f0  3e95 handle_background_stone_door           stone door              +  +  +  +
-;;    &05  &9c &b1  3fb7 handle_background_object_from_type     (use object_type)       +  -  +  +
-;;    &06  &9c &b1  3fb7 handle_background_object_from_type     (use object_type)       +  -  +  +
-;;    &07  &9c &b1  3fb7 handle_background_object_from_type     (use object_type)       +  -  +  +
-;;    &08  &b2 &b1  3fcd handle_background_switch                       switch                  +  -  +  +
-;;    &09  &00 &b0  3e1b handle_background_object_emerging      (use object_type)       +  -  +  +
-;;    &0a  &00 &b0  3e1b handle_background_object_emerging      (use object_type)       +  -  +  +
-;;    &0b  &26 &31  3f41 handle_background_object_fixed_wind                              -  -  +  +
-;;    &0c  &6f &90  3e8a handle_background_engine_thruster      engine thruster         +  -  -  +
-;;    &0d  &88 &31  3fa3 handle_background_object_water                                   -  -  +  +
-;;    &0e  &fd &30  3f18 handle_background_object_random_wind                             -  -  +  +
-;;    &0f  &b7 &31  3fd2 handle_background_mushrooms            mushroom ball           -  -  +  +
-;;    &10  &7b &02  4096 handle_explosion_type_00
-;;    &11  &a3 &02  40be handle_explosion_type_40
-;;    &12  &a0 &02  40bb handle_explosion_type_80
-;;    &13  &aa &02  40c5 handle_explosion_type_c0
-;; 
-;;    stack objects:
-;;  r no   l   h    addr  name                        object
-;;  0:&00  &f6 &0b  &4a11 handle_player_object          player
-;;    &01  &bc &0a  &48d7 handle_chatter_active         active chatter
-;;    &02  &d5 &88  &46f0 handle_crew_member            pericles crew member
-;;    &03  &6d &84  &4288 handle_fluffy                 fluffy
-;;  1:&04  &94 &cd  &4baf handle_nest                   small nest
-;;    &05  &94 &cd  &4baf handle_nest                   big nest
-;;  2:&06  &48 &86  &4463 handle_frogman_red            red frogman
-;;    &07  &5c &86  &4477 handle_frogman_green          green frogman
-;;    &08  &5a &86  &4475 handle_frogman_cyan           cyan frogman
-;;    &09  &ae &09  &47c9 handle_red_slime              red slime
-;;    &0a  &0f &04  &422a handle_green_slime            green slime
-;;    &0b  &4b &04  &4266 handle_yellow_ball            yellow ball
-;;    &0c  &6e &09  &4789 handle_sucker                 sucker
-;;    &0d  &d2 &0f  &4ded handle_sucker_deadly          deadly sucker
-;;    &0e  &46 &89  &4761 handle_big_fish               big fish
-;;  3:&0f  &ef &83  &420a handle_worm                   worm
-;;    &10  &06 &d1  &4f21 handle_nest_dweller           pirahna
-;;    &11  &06 &91  &4f21 handle_nest_dweller           wasp
-;;  4:&12  &dc &c4  &42f7 handle_grenade_active         active grenade
-first_bullet_type=$13
-;;    &13  &a4 &c8  &46bf handle_icer_bullet            icer bullet
-;;    &14  &f9 &c7  &4614 handle_tracer_bullet          tracer bullet
-;;    &15  &0b &c5  &4326 handle_cannonball           cannonball
-;;    &16  &17 &c5  &4332 handle_death_ball_blue        blue death ball
-;;    &17  &2f &c5  &434a handle_red_bullet             red bullet
-;;    &18  &00 &c6  &441b handle_pistol_bullet          pistol bullet
-;;    &19  &6d &8c  &4a88 handle_plasma_ball            plasma ball
-;;    &1a  &cc &45  &43e7 handle_hover_ball             hover ball
-;;    &1b  &d0 &45  &43eb handle_hover_ball_invisible   invisible hover ball
-first_robot_type=$1c
-;;  5:&1c  &c3 &50  &4ede handle_robot                  magenta robot
-;;    &1d  &c3 &50  &4ede handle_robot                  red robot
-;;    &1e  &c7 &50  &4ee2 handle_robot_blue             blue robot
-;;    &1f  &bd &50  &4ed8 handle_turret                 green/white turret
-;;    &20  &bd &50  &4ed8 handle_turret                 cyan/red turret
-;;    &21  &e9 &49  &4804 handle_hovering_robot         hovering robot
-first_clawed_robot_type=$22
-;;  6:&22  &04 &4a  &481f handle_clawed_robot           magenta clawed robot
-;;    &23  &04 &4a  &481f handle_clawed_robot           cyan clawed robot
-;;    &24  &04 &4a  &481f handle_clawed_robot           green clawed robot
-;;    &25  &04 &4a  &481f handle_clawed_robot           red clawed robot
-;;    &26  &e9 &08  &4704 handle_triax                  triax
-;;    &27  &37 &90  &4e52 handle_maggot                 maggot
-;;    &28  &55 &c3  &4170 handle_gargoyle               gargoyle
-;;    &29  &d4 &86  &44ef handle_imp                    red/magenta imp
-;;    &2a  &d4 &86  &44ef handle_imp                    red/yellow imp
-;;    &2b  &d4 &86  &44ef handle_imp                    blue/cyan imp
-;;    &2c  &d4 &86  &44ef handle_imp                    cyan/yellow imp
-;;    &2d  &d4 &86  &44ef handle_imp                    red/cyan imp
-first_bird_type=$2e
-;;    &2e  &16 &88  &4631 handle_bird                   green/yellow bird
-;;    &2f  &16 &88  &4631 handle_bird                   white/yellow bird
-;;    &30  &06 &88  &4621 handle_bird_red               red/magenta bird
-;;    &31  &10 &88  &462b handle_bird_invisible         invisible bird
-;;  7:&32  &e6 &02  &4000 handle_lightning              lightning
-;;    &33  &7d &08  &4698 handle_mushroom_ball          red mushroom ball
-;;    &34  &7d &08  &4698 handle_mushroom_ball          blue mushroom ball
-;;    &35  &76 &09  &4791 handle_engine_fire            engine fire
-;;    &36  &7e &c9  &4799 handle_red_drop               red drop
-;;    &37  &bb &0c  &4ad6 handle_fireball               fireball
-;;  8:&38  &a6 &0a  &48c1 handle_chatter_inactive       inactive chatter
-;;    &39  &0b &0d  &4b26 handle_moving_fireball        moving fireball
-;;    &3a  &81 &05  &439c handle_giant_wall             giant wall
-;;    &3b  &fa &0d  &4c15 handle_engine_thruster        engine thruster
-;;    &3c  &68 &ce  &4c83 handle_door                   horizontal door
-;;    &3d  &68 &ce  &4c83 handle_door                   vertical door
-;;    &3e  &68 &ce  &4c83 handle_door                   horizontal stone door
-;;    &3f  &68 &ce  &4c83 handle_door                   vertical stone door
-;;    &40  &8e &0d  &4ba9 handle_bush                   bush
-;;    &41  &6b &0f  &4d86 handle_teleport_beam          teleport beam
-;;    &42  &82 &cb  &499d handle_switch                 switch
-;;    &43  &92 &05  &43ad (null function)               chest
-;;    &44  &81 &11  &4f9c handle_explosion              explosion
-;;    &45  &92 &05  &43ad (null function)               rock
-;;    &46  &d3 &02  &40ee handle_cannon                 cannon
-;;    &47  &fb &43  &4216 handle_mysterious_weapon      mysterious weapon
-;;    &48  &84 &03  &419f handle_maggot_machine         maggot machine
-;;    &49  &49 &0d  &4b64 handle_placeholder            placeholder
-;;  9:&4a  &59 &05  &4374 handle_destinator             destinator
-;;    &4b  &45 &85  &4360 handle_energy_capsule         energy capsule
-;;    &4c  &8c &05  &43a7 handle_flask                  empty flask
-;;    &4d  &93 &05  &43ae handle_flask_full             full flask
-rcd_type=$4e
-;;    &4e  &36 &05  &4351 handle_remote_control         remote control device
-;;    &4f  &36 &05  &4351 handle_remote_control         cannon control device
-;;    &50  &3d &c3  &4158 handle_grenade_inactive       inactive grenade
-;;    &51  &6d &0d  &4b88 handle_collectable            cyan/yellow/green key
-;;    &52  &6d &0d  &4b88 handle_collectable            red/yellow/green key
-;;    &53  &6d &0d  &4b88 handle_collectable            green/yellow/red key
-;;    &54  &6d &0d  &4b88 handle_collectable            yellow/white/red key
-;;    &55  &af &03  &41ca handle_coronium_boulder       coronium boulder
-;;    &56  &6d &0d  &4b88 handle_collectable            red/magenta/red key
-;;    &57  &6d &0d  &4b88 handle_collectable            blue/cyan/green key
-;;    &58  &a7 &03  &41c2 handle_coronium_crystal       coronium crystal
-;;    &59  &6d &0d  &4b88 handle_collectable            jetpack booster
-;;    &5a  &6d &0d  &4b88 handle_collectable            pistol
-;;    &5b  &6d &0d  &4b88 handle_collectable            icer
-;;    &5c  &6d &0d  &4b88 handle_collectable            discharge device
-;;    &5d  &6d &0d  &4b88 handle_collectable            plasma gun
-;;    &5e  &6d &0d  &4b88 handle_collectable            protection suit
-;;    &5f  &6d &0d  &4b88 handle_collectable            fire immunity device
-;;    &60  &6d &0d  &4b88 handle_collectable            mushroom immunity pull
-;;    &61  &6d &0d  &4b88 handle_collectable            whistle 1
-;;    &62  &6d &0d  &4b88 handle_collectable            whistle 2
-;;    &63  &6d &0d  &4b88 handle_collectable            radiation immunity pull
-;;    &64  &92 &05  &43ad (null function)               ?
-;; 
-;; ##############################################################################
-;;        0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
-;; 00
-;; 10
-;; 20
-;; 30
-;; 40
-;; 50
-;; 60
-;; object_palette_lookup
-;;  & &80 = can be picked up
-;;  & &7f = palette
-;;        0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
-;; 00
-;; 10
-;; 20
-;; 30
-;; 40
-;; 50
-;; 60
-;;  & &80 = doesn't collide with other objects
-;;  & &07 = weight; 01 = light, 06 = heavy, 07 = static
-;;        0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
-;; 00
-;; 10
-;; 20
-;; 30
-;; 40
-;; 50
-;; 60
-;;        0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f  0  1  2  3
-;; for background objects / explosions
-;; 00
-;; 10
-;; 20
-;; 30
-;; 40
-;; 50
-;; 60
-;;  & &c0 = how the object explodes
-;;        0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f  0  1  2  3
-;; for background objects / explosions
-;; 00
-;; 10
-;; 20
-;; 30
-;; 40
-;; 50
-;; 60
-;; ##############################################################################
-;; 
-;;    Background sprites
-;;    ==================
-;; 
-;;    00 = bottom left, unflipped
-;;    40 = top left, vertical flip
-;;    80 = bottom right, horizontal flip
-;;    c0 = top right, vertical & horizontal flip
-;; 
-;;    00 = bush
-;;    01 = stone \ wall, filled in bottom left
-;;    02 = turret, top, facing left
-;;    03 = door, horizontal, top
-;;    04 = brick wall, solid
-;;    05 = brick wall, 3/4 full, \, filled in bottom left
-;;    06 = brick wall, \, starting top left, ending middle right
-;;    07 = stone wall, bottom edging
-;;    08 = nothing ?
-;;    09 = sucker, bottom
-;;    0a = big pipe entrance, bottom
-;;    0b = wind
-;;    0c = engine exhaust, \ filled in bottom left
-;;    0d = water
-;;    0e = mushrooms, bottom right corner
-;;    0f = mushrooms, bottom
-;;    10 = green stone wall, bottom edging
-;;    11 = green leaf, bottom left corner
-;;    12 = brick wall, solid
-;;    13 = brick wall, \, starting top middle, ending middle right, 3/4 full
-;;    14 = spaceship pipework
-;;    15 = thin spaceship wall, left side
-;;    16 = thick spaceship wall, bottom edge
-;;    17 = thin spacewship wall, bottom edge
-;;    18 = flag? left side
-;;    19 = nothing ?
-;;    1a = half a bush, bottom left corner
-;;    1b = bush, bottom left corner
-;;    1c = spaceship tiny corner piece, bottom left
-;;    1d = spaceship 3/4 corner piece, bottom left
-;;    1e = brick wall, solid
-;;    1f = brick wall, bottom half
-;;    20 = horizontal brick door
-;;    21 = pillar, left edge
-;;    22 = green leaf, bottom left corner
-;;    23 = brick \ wall, filled in bottom left
-;;    24 = brick wall, \, starting top left, ending middle right
-;;    25 = brick wall, \, starting middle left, ending bottom right
-;;    26 = spaceship wall, \, starting top left, ending half top right
-;;    27 = spaceship wall, \, starting half top left, ending middle right
-;;    28 = spaceship wall, \, starting middle left, ending half bottom right
-;;    29 = spaceship wall, \, starting half bottom left, ending bottom left
-;;    2a = brick wall, \, very steep down
-;;    2b = couple of pixels of stone edging strip, bottom
-;;    2c = stone edge, bottom
-;;    2d = stone wall, solid
-;;    2e = stone \ wall, filled in bottom left
-;;    2f = stone \ wall, starting top left, ending middle right
-;;    30 = stone \ wall, starting middle left, ending bottom right
-;;    31 = stone - wall, filled bottom
-;;    32 = spaceship corner with pipes, filled
-;;    33 = pipe, bottom
-;;    34 = pipe, bottom left corner
-;;    35 = pipe, left
-;;    36 = spaceship - wall, filled bottom
-;;    37 = spaceship corner with pipes, filled
-;;    38 = spaceship pipes, half, filled bottom
-;;    39 = vertical brick door
-;;    3a = gargoyle, bottom left
-;;    3b = brick wall, 3/4 filled bottom
-;;    3c = big pipe entrance, bottom
-;;    3d = spaceship support
-;;    3e = computer console, bottom left
-;;    3f = hydraulic leg
-;; 
-;; ##############################################################################
-;;  & &7f = sprite
-;;  & &80 = vertically flipped
-;;        0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
-;;        0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
-;;        0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
-;;  Add &100 to get address in wall_base_y_lookup
-;;       -- -V H- HV
-;;  [TOM background_objects_range 1d was 19]
-;; 07f8 is where the game state data starts copying from
-;; 07f8 - 07fe : copy of &d9 - &df when saving position
-;; cyan/yellow/green key
-;; red/yellow/green key
-;; green/yellow/red key
-;; yellow/white/red key
-;; (unused)
-;; red/magenta/red key
-;; blue/cyan/green key
-;; (unused)
-;; discharge device
-;; plasma gun
-;; (unused)
-;; contents of pockets
-;;        0  1  2  3  4  5 jetpack, pistol, icer, discharge, plasma, suit
-;; ##############################################################################
-;; 
-;;    Object Stack (primary)
-;;    ======================
-;;    (&9b, &3b) &00 player
-;;    (&99, &3b) &26 triax
-;;    fourteen empty slots
-;; 
-;; ##############################################################################
-;;  [TOM object_stack_type - 24 was 47]
-;; seventeenth slot = target
-;; eighteenth slot = waterfall (&65, &dc), for sound
-;;  [TOM object_stack_y_low - 80 was 20]
-;;  80 set = horizontal invert (facing left)
-;;  40 set = vertical invert (upside down)
-;;  20 set = remove from display
-;;  10 set = teleporting
-;;  08 set = damaged
-;;  02 set = collision detected
-;;  01 set at load positon?
-;;  object_stack_palette:
-;;  10 set = damaged
-;;  [TOM object_stack_target - 02 was 20]
-;;  [TOM object_stack_supporting - c9 was 09]
+
 ;; ##############################################################################
 ;; 
 ;;    Background objects
@@ -1603,7 +1426,34 @@ rcd_type=$4e
 ;;    &fd : &06ec = &e8  &07eb = &91  &0a76 = &00  &0af9 = &00  (&e8, &80) &11: leaf
 ;; 
 ;; ##############################################################################
+.background_objects_data
 ;;  &80 set = not in current stack
+    equb $00,$7C,$60,$04,$88,$88,$A0,$A6,$AE,$83,$86,$82,$80,$80,$AD,$81
+    equb $F7,$A1,$F1,$F7,$81,$8A,$AC,$D2,$DF,$D4,$A3,$84,$85,$AE,$80,$80
+    equb $88,$AC,$C4,$C0,$04,$A8,$C4,$BC,$FD,$81,$C1,$D1,$91,$F1,$F1,$DA
+    equb $F7,$F3,$D8,$88,$80,$83,$83,$B0,$AA,$80,$80,$87,$80,$30,$08,$10
+    equb $7C,$04,$10,$A8,$90,$04,$C1,$F1,$E1,$95,$BC,$B4,$FD,$A1,$D6,$DD
+    equb $E2,$04,$0C,$04,$20,$21,$A0,$B0,$AC,$83,$81,$84,$80,$C4,$85,$95
+    equb $A3,$B5,$F1,$AD,$C1,$81,$89,$A0,$C1,$F1,$F1,$C1,$8C,$A4,$E4,$D7
+    equb $9D,$E1,$A6,$81,$85,$83,$83,$D0,$A8,$04,$04,$D0,$88,$04,$04,$04
+    equb $08,$BD,$8A,$F1,$D1,$F1,$B1,$F1,$C1,$C1,$C1,$C1,$E2,$E4,$DC,$A0
+    equb $C2,$CB,$B8,$A8,$10,$98,$A0,$80,$83,$80,$80,$80,$80,$00,$C4,$40
+    equb $84,$28,$75,$BC,$F1,$D1,$A9,$F1,$C0,$C1,$8F,$94,$C2,$CA,$FA,$9C
+    equb $FE,$10,$14,$90,$98,$04,$A4,$80,$83,$C6,$C4,$FE,$AA,$90,$EC,$DC
+    equb $9E,$F4,$F7,$F1,$F1,$81,$F1,$F1,$B1,$DB,$9E,$84,$AC,$80,$80,$80
+    equb $80,$80,$80,$80,$C0,$04,$08,$90,$A2,$04,$04,$04,$20,$BC,$53,$9D
+    equb $84,$DA,$CB,$DE,$C5,$A5,$C1,$F1,$70,$D0,$80
+.background_objects_type
+    equb $00,$0F,$27,$2E,$07,$2F,$2D,$1F,$1F,$0D,$0D,$0D,$0C,$60,$2C,$00
+    equb $0D,$0D,$1F,$0D,$5C,$0D,$20,$05,$04,$06,$31,$05,$2A,$09,$0D,$0D
+    equb $1F,$20,$55,$55,$0D,$63,$0F,$2E,$0A,$1B,$37,$29,$1A,$1A,$37,$37
+    equb $0A,$37,$4B,$4B,$2D,$1F,$20,$0D,$0D,$28,$55,$05,$80,$00,$80,$80
+    equb $20,$28,$0D,$0D,$28,$27,$31,$0E,$08,$11,$39,$37,$37,$37,$2A,$80
+    equb $4A,$10,$2F,$30,$30,$09,$0D,$09,$09,$4F,$24,$4A,$04,$1A,$39,$10
+    equb $00,$4C,$0A,$2F,$29,$2C,$37,$20,$3A,$0D,$05,$05,$0D,$20,$0D,$0D
+    equb $48,$51,$0C,$55,$22,$04,$2E,$2F,$2B,$2A,$21,$02,$02,$1A,$80,$4B
+    equb $80
+
 ;; ##############################################################################
 ;; 
 ;;    Secondary object stack
@@ -1630,7 +1480,107 @@ rcd_type=$4e
 ;;    (&00, &00) &00 (thirteen empty slots)
 ;; 
 ;; ##############################################################################
+.secondary_object_stack_x
+    equb $9B,$A3,$98,$98,$A4,$9F,$A0,$C0,$48,$83,$C5,$87,$97,$E1,$84,$98
+    equb $99,$E7,$7C,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+.secondary_object_stack_y
+    equb $39,$5D,$4D,$4D,$67,$49,$49,$4E,$56,$78,$60,$59,$5E,$61,$5B,$80
+    equb $3C,$80,$77,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+.secondary_object_stack_type
+    equb $64,$43,$50,$50,$59,$50,$46,$50,$50,$4E,$45,$53,$1D,$03,$50,$50
+    equb $4A,$3A,$4C,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+.possible_checksum
+    equb $DC
+.secondary_object_stack_energy_and_low
+    equb $F0,$F3,$71,$79,$FB,$42,$F5,$47,$F3,$F2,$F3,$F2,$F0,$FB,$F2,$40
+    equb $FB,$F0,$F1,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00,$00
+    
 ;;  variables used for secondary stack
+.secondary_stack_object_number
+    equb $00
+.secondary_stack_random_1f
+    equb $00
+.maybe_another_checksum
+    equb $43
+.consider_secondary_stack_objects
+    equb $00
+.secondary_stack_player_odometer
+    equb $00
+.sprite_and
+    equb $FF
+.palette_value_to_pixel_lookup
+equb $CA                        ; yellow bg, black bg
+equb $C9                        ; green bg, red bg
+equb $E3                        ; magenta bg, red bg
+equb $E9                        ; cyan bg, red bg
+equb $EB                        ; white bg, red bg
+equb $CE                        ; yellow bg, green bg
+equb $F8                        ; cyan bg, blue bg
+equb $E6                        ; magenta bg, green bg
+equb $CC                        ; green bg, green bg
+equb $EE                        ; white bg, green bg
+equb $30                        ; blue fg, blue fg
+equb $DE                        ; yellow bg, cyan bg
+equb $EF                        ; white bg, yellow bg
+equb $CB                        ; yellow bg, red bg
+equb $FB                        ; white bg, magenta bg
+equb $FE                        ; white bg, cyan bg
+        
+.plot_sprite_screen_location_offsets_low
+    equb $00
+    equb $EA
+    equb $00
+    equb $EA
+.plot_sprite_screen_location_offsets
+    equb $00
+    equb $EA
+    equb $00
+    equb $EA
+.screen_offset_x_low
+    equb $EA
+.screen_offset_x_low_old
+    equb $EA
+.screen_offset_y_low
+    equb $EA
+.screen_offset_y_low_old
+    equb $EA
+.screen_offset_x
+    equb $EA
+.screen_offset_x_old
+    equb $EA
+.screen_offset_y
+    equb $EA
+.screen_offset_y_old
+    equb $EA
+.plot_sprite_screen_address_offsets_low
+    equb $00
+    equb $EA
+    equb $00
+    equb $EA
+.plot_sprite_screen_address_offsets
+    equb $08
+    equb $EA
+IF SRAM
+    equb 8
+ELSE
+    equb $04
+ENDIF
+    equb $EA
+.used_in_redraw_0ba1
+    equb $F0
+    equb $F0
+    equb $F8
+    equb $F8
+.plot_sprite_when_to_flags_and
+    equb $05
+    equb $0A
+    equb $00
+    equb $00
+first_bullet_type=$13
+first_robot_type=$1c
+first_clawed_robot_type=$22
+first_bird_type=$2e
+rcd_type=$4e
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
