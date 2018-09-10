@@ -2795,6 +2795,7 @@ ENDIF
 .lookup_for_unmatched_hash
     equb $1B,$5A,$19,$19,$1E,$13,$24,$2C,$19
 .wall_palette_zero_lookup
+;;  lookup table for Y -> palette for background
     equb $8D,$82,$8B,$8F,$84,$89,$8D
 .wall_palette_four_lookup
     equb $81,$82,$81,$85
@@ -2808,37 +2809,115 @@ equb $81
 .M1191
     equb $00
 .sound_max_channels
-    equb $03
+    equb $03                    ; 3 normally, or 2 when a sample is
+                                ; playing
     equb $01; (unused)
-.sound_data_119c
+.sound_data_119c                ; read-only data
     equb $00,$40,$84,$B6
-.sound_data_11a0
+.sound_data_11a0                ; read-only data
     equb $E0,$10,$4A,$80
-.sound_data_11a4
-    equb $E0,$C0,$A0,$80,$F0,$D0,$B0,$90
+.sound_chip_frequency_commands
+    ; used as the top 4 bits of values written to sound chip
+    equb $E0                    ; 1 110 = noise control
+    equb $C0                    ; 1 100 = tone 1 freq
+    equb $A0                    ; 1 010 = tone 2 freq
+    equb $80                    ; 1 000 = tone 3 freq
+.sound_chip_volume_commands
+    equb $F0                    ; 1 111 = noise volume
+    equb $D0                    ; 1 101 = tone 1 volume
+    equb $B0                    ; 1 011 = tone 2 volume
+    equb $90                    ; 1 001 = tone 3 volume
 .sound_duration
-    equb $00,$00,$00,$00,$00,$00,$00,$00
-.sound_data_11b4
-    equb $33,$22,$11,$00,$33,$22,$11,$00
-.sound_data_11bc
-    equb $33,$22,$11,$00,$33,$22,$11,$00
+    ; storage for [1]&0xf0 of sound data
+    equb $00,$00,$00,$00
+    ; storage for [3]&0xf0 of sound data
+    equb $00,$00,$00,$00
+.sound_channel_table_indexes
+; storage for [0] of sound data - used as index for
+; sound_data_big_lookup_table
+    equb $33,$22,$11,$00
+; storage for [2] of sound data - used as index for
+; sound_data_big_lookup_table
+    equb $33,$22,$11,$00
+.sound_channel_counters
+; starts out at 0 each time a sound is started
+    equb $33,$22,$11,$00
+    equb $33,$22,$11,$00
 .sound_data_11c4
-    equb $33,$22,$11,$00,$33,$22,$11,$00
+; starts out at 0 each time a sound is started
+    equb $33,$22,$11,$00
+    equb $33,$22,$11,$00
 .sound_duration_low
-    equb $00,$00,$00,$00,$00,$00,$00,$00
+; storage for [1]&0x0f of sound data
+; 0 if no sound playing on this channel.
+    equb $00,$00,$00,$00
+; storage for [3]&0x0f of sound data
+    equb $00,$00,$00,$00
 .sound_data_11d4
+; stores sound_data_big_lookup_table indexes
     equb $33,$22,$11,$00,$33,$22,$11,$00
-.sound_data_11dc
-    equb $00,$00,$00,$00,$00,$00,$00,$00
+.sound_channel_distances
+    equb $00,$00,$00,$00
+.sound_channel_data_ls
+    equb $00,$00,$00,$00
 .palette_register_updating
     equb $00
 .palette_register_data
+;;       0:black 1:red 2:green 3:yellow 4:blue 5:magenta 6:cyan 7:white
+;;       8:black 9:red a:green b:yellow c:blue d:magenta e:cyan f:white
     equb $07,$16,$25,$34,$43,$52,$61,$70,$87,$96,$A5,$B4,$C3,$D2,$E1,$F0
 .keys_processed
     equb $00
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+;; ##############################################################################
+;; 
+;;    Function Table
+;;    ==============
+;;    offset sym  h  l        key     address function
+;;    00      69 6a 75        copy    &3576   pause               ; mapped as END in mess
+;;    01      20 59 e1        f0      &2ce2   change_to_weapon
+;;    02      71 59 e1        f1      &2ce2   change_to_weapon
+;;    03      72 59 e1        f2      &2ce2   change_to_weapon
+;;    04      73 59 e1        f3      &2ce2   change_to_weapon
+;;    05      14 59 e1        f5      &2ce2   change_to_weapon
+;;    06      74 59 e1        f5      &2ce2   change_to_weapon
+;;    07      75 59 e1        f6      &2ce2   change_to_weapon
+;;    08      16 59 e1        f7      &2ce2   change_to_weapon
+;;    09      76 59 e1        f8      &2ce2   change_to_weapon
+;;    0a      77 59 e1        f9      &2ce2   change_to_weapon
+;;    0b      77 28 d5        f9      &14d6   f9_pressed
+;;    0c      53 69 f7        g       &34f8   retrieve_object
+;;    0d      62 5b 32        space   &2d33   fire_weapon
+;;    0e      25 62 1f        i       &3120   reset_gun_aim
+;;    0f      19 59 1c        left    &2c1d   scroll_viewpoint
+;;    10      79 59 1c        right   &2c1d   scroll_viewpoint
+;;    11      39 59 1c        up      &2c1d   scroll_viewpoint
+;;    12      29 59 1c        down    &2c1d   scroll_viewpoint
+;;    13      46 62 28        k       &3129   lower_gun_aim
+;;    14      36 62 25        o       &3126   raise_gun_aim
+;;    15      47 58 80        @       &2c81   use_booster         ; mapped as \ in mess
+;;    16      01 58 79        ctrl    &2c80   (null)
+;;    17      60 3d 18        tab     &1e19   swap_direction
+;;    18      44 59 98        y       &2c99   play_whistle_1
+;;    19      35 59 ab        u       &2cac   play_whistle_2
+;;    1a      23 19 c0        t       &0cc1   teleport_player
+;;    1b      33 59 3b        r       &2c3c   store_teleport
+;;    1c      67 64 d8        .       &32d9   throw_object
+;;    1d      65 64 c7        m       &32c8   drop_object
+;;    1e      66 64 b5        ,       &32b6   pick_up_object
+;;    1f      51 69 b0        s       &34b1   store_object
+;;    20      63 25 99        v       &129a   volume_control
+;;    21      10 58 6c        q       &2c6d   move_left
+;;    22      21 58 69        w       &2c6a   move_right
+;;    23      37 58 72        p       &2c73   move_up
+;;    24      37 77 92        p       &3b93   p_pressed
+;;    25      56 58 6f        l       &2c70   move_down
+;;    26      00 28 9b        shift   &149c   (null)
+;; 
+;; ##############################################################################
 
 .function_table
 equb LO(pause-1)
@@ -3018,57 +3097,6 @@ num_keys=39
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-;; [TOM 2f was 2e]
-;;  lookup table for Y -> palette for background
-;; (unused)
-;;       0:black 1:red 2:green 3:yellow 4:blue 5:magenta 6:cyan 7:white
-;;       8:black 9:red a:green b:yellow c:blue d:magenta e:cyan f:white
-;; ##############################################################################
-;; 
-;;    Function Table
-;;    ==============
-;;    offset sym  h  l        key     address function
-;;    00      69 6a 75        copy    &3576   pause               ; mapped as END in mess
-;;    01      20 59 e1        f0      &2ce2   change_to_weapon
-;;    02      71 59 e1        f1      &2ce2   change_to_weapon
-;;    03      72 59 e1        f2      &2ce2   change_to_weapon
-;;    04      73 59 e1        f3      &2ce2   change_to_weapon
-;;    05      14 59 e1        f5      &2ce2   change_to_weapon
-;;    06      74 59 e1        f5      &2ce2   change_to_weapon
-;;    07      75 59 e1        f6      &2ce2   change_to_weapon
-;;    08      16 59 e1        f7      &2ce2   change_to_weapon
-;;    09      76 59 e1        f8      &2ce2   change_to_weapon
-;;    0a      77 59 e1        f9      &2ce2   change_to_weapon
-;;    0b      77 28 d5        f9      &14d6   f9_pressed
-;;    0c      53 69 f7        g       &34f8   retrieve_object
-;;    0d      62 5b 32        space   &2d33   fire_weapon
-;;    0e      25 62 1f        i       &3120   reset_gun_aim
-;;    0f      19 59 1c        left    &2c1d   scroll_viewpoint
-;;    10      79 59 1c        right   &2c1d   scroll_viewpoint
-;;    11      39 59 1c        up      &2c1d   scroll_viewpoint
-;;    12      29 59 1c        down    &2c1d   scroll_viewpoint
-;;    13      46 62 28        k       &3129   lower_gun_aim
-;;    14      36 62 25        o       &3126   raise_gun_aim
-;;    15      47 58 80        @       &2c81   use_booster         ; mapped as \ in mess
-;;    16      01 58 79        ctrl    &2c80   (null)
-;;    17      60 3d 18        tab     &1e19   swap_direction
-;;    18      44 59 98        y       &2c99   play_whistle_1
-;;    19      35 59 ab        u       &2cac   play_whistle_2
-;;    1a      23 19 c0        t       &0cc1   teleport_player
-;;    1b      33 59 3b        r       &2c3c   store_teleport
-;;    1c      67 64 d8        .       &32d9   throw_object
-;;    1d      65 64 c7        m       &32c8   drop_object
-;;    1e      66 64 b5        ,       &32b6   pick_up_object
-;;    1f      51 69 b0        s       &34b1   store_object
-;;    20      63 25 99        v       &129a   volume_control
-;;    21      10 58 6c        q       &2c6d   move_left
-;;    22      21 58 69        w       &2c6a   move_right
-;;    23      37 58 72        p       &2c73   move_up
-;;    24      37 77 92        p       &3b93   p_pressed
-;;    25      56 58 6f        l       &2c70   move_down
-;;    26      00 28 9b        shift   &149c   (null)
-;; 
-;; ##############################################################################
 .increment_game_time
     INX
 .increment_game_time_X
@@ -3174,74 +3202,119 @@ ENDIF
     JSR increment_game_time_X
     LDA #$FF
     STA $FE43
-    LDX sound_max_channels                          ; handle sounds
+
+; handle sounds
+
+    LDX sound_max_channels
 .L1323
     JSR process_sound
     BCS L1332
-    LDA sound_duration,X
-    SBC #$01
-    BCC sound_run_out
-    STA sound_duration,X
+    LDA sound_duration,X        ; sound duration for channel
+    SBC #$01                    ; subtract 2?!
+    BCC sound_run_out           ; bail if sound done, or if it wasn't
+                                ; playing
+    STA sound_duration,X        ; update sound duration for channel
 .L1332
+; advance to second half of sound data
     INX
     INX
     INX
     INX
+    ; process second half of sound data
     JSR process_sound
+    ; wind back to first half of sound data
     DEX
     DEX
     DEX
     DEX
     BCC sound_run_out
-    BNE L1345
+    BNE L1345                   ; taken if tone channel
     CMP used_in_sound
     BEQ sound_run_out
 .L1345
     EOR #$FF
+    
+; map 8-bit pitch to 10-bit frequency.
+;
+; A>=$b6: subtract $80, scale by 8 ($36-$7f * 8 = $1b0-$3f8)
+; A>=$84: subtract $4a, scale by 4 ($3a-$6b * 4 = $e8-$1ac)
+; A>=$40: subtract $10, scale by 2 ($30-$74 * 2 = $60-$e8)
+; A<$40 : subtract $e0, no scale   ($20-$60 * 1 = $20-$60)
+
     LDY #$04
     STY used_in_sound
 .L134B
     DEY
     CMP sound_data_119c,Y
+; the 0th entry in sound_data_199c is 0, so this loop will eventually
+; terminate with Y=0, C=1.
     BCC L134B
+
     SBC sound_data_11a0,Y
+
+; scale up and shift the lost bits into the bottom of used_in_sound
+
 .L1354
     DEY
-    BMI L135D
-    ASL A
-    ROL used_in_sound
-    JMP L1354
+    BMI L135D                   ; taken if Y<0
+    ASL A                       ; get sign bit
+    ROL used_in_sound           ; shift into used_in_sound
+    JMP L1354                   ; loop
+    
 .L135D
-    PHA
-    AND #$0F
-    ORA sound_data_11a4,X
-    JSR push_sound_to_chip
-    PLA
-    CPX #$00
-    BEQ sound_run_out
-    LSR used_in_sound
-    ROR A
-    LSR used_in_sound
-    ROR A
-    LSR A
-    LSR A
-    JSR push_sound_to_chip
+; see SN76489 data sheet, section 6
+; 
+; Accumulator:
+;
+;    7    6    5    4    3    2    1    0
+; +----+----+----+----+----+----+----+----+
+; | F7 | F6 | F5 | F4 | F3 | F2 | F1 | F0 |
+; +----+----+----+----+----+----+----+----+
+;
+; used_in_sound:
+;
+;    7    6    5    4    3    2    1    0
+; +----+----+----+----+----+----+----+----+
+; | x  | x  | x  | x  | x  | x  | F9 | F8 |
+; +----+----+----+----+----+----+----+----+
+
+    PHA                         
+    AND #$0F                    ; get bottom 4 bits of data
+    ORA sound_chip_frequency_commands,X ; mask in register value
+    JSR push_sound_to_chip      ; write tone frequency bits 0-3
+    PLA                         
+    CPX #$00                    
+    BEQ sound_run_out           ; taken if working on noise control
+                                ; register, which is only 4 bits
+
+; get top 6 bits
+
+    LSR used_in_sound           ; 
+    ROR A                       ; 87654321
+    LSR used_in_sound           ; 
+    ROR A                       ; 98765432
+    LSR A                       ; -9876543
+    LSR A                       ; --987654
+    JSR push_sound_to_chip      ; write tone frequency bits 4-9
 .sound_run_out
-    LDA sound_duration,X
-    SBC sound_data_11dc,X
-    BCS L1380
-    LDA #$00
+
+; attenuate with distance??
+
+    LDA sound_duration,X        
+    SBC sound_channel_distances,X
+    BCS L1380                   ; taken if no borrow
+    LDA #$00                    ; clamp to zero
 .L1380
-    AND volume
-    EOR #$FF
+    AND volume                  ; silence if sound off
+    EOR #$FF                    ; 0=max sound chip volume
     LSR A
     LSR A
     LSR A
     LSR A
-    ORA sound_data_11a4+4,X
+    ORA sound_chip_volume_commands,X
     JSR push_sound_to_chip
     DEX
-    BPL L1323
+    BPL L1323                   ; taken if more channels left
 }
 .leave_interrupt
     PLA
@@ -3258,158 +3331,180 @@ ENDIF
 .process_sound
 {
     CLC
-    LDA sound_duration_low,X                        ; is this channel playing?
-    BEQ process_sound_out                           ; if not, leave
-    LDY sound_data_11b4,X
-    LDA sound_data_11bc,X
-    BNE L13D4
-    LDA sound_data_11c4,X
-    BNE L13B1
-    DEC sound_duration_low,X
-    BEQ process_sound_out
+    LDA sound_duration_low,X    ; is this channel playing?
+    BEQ process_sound_out       ; taken if not playing. Leave with
+                                ; C=0.
+    LDY sound_channel_table_indexes,X ; get channel's big lookup table index
+    LDA sound_channel_counters,X ; get channel's counter
+    BNE L13D4                   ; branch taken if counter active?
+    LDA sound_data_11c4,X       ; get channel's counter
+    BNE L13B1                   ; branch taken if counter active?
+
+; code gets here on first call for a given sound.
+;
+; sound_duration_low counts number of timeouts of both counters??
+
+    DEC sound_duration_low,X    ; decrement sound duration
+    BEQ process_sound_out       ; if sound done, leave with C=0
+
 .L13B1
-    INY
-    LDA sound_data_big_lookup_table,Y
-    BPL L13CC
-    DEC sound_data_11c4,X
-    BPL L13C6
-    AND #$7F
-    STA sound_data_11c4,X
-    INY
-    TYA
-    STA sound_data_11d4,X
+    INY                               ; next table index
+    LDA sound_data_big_lookup_table,Y ; fetch table value
+    BPL L13CC                         ; taken if bit 7 clear
+
+; bit 7 set
+
+    DEC sound_data_11c4,X             ; decrement channel's counter
+    BPL L13C6               ; branch taken if counter still positive
+
+    AND #$7F                ; mask off table value bit 7, which was
+                            ; set
+    STA sound_data_11c4,X   ; save as new channel counter
+    INY                     ; next table byte
+    TYA                     ; 
+    STA sound_data_11d4,X   ; store table byte in channel's data
 .L13C6
-    LDY sound_data_11d4,X
-    LDA sound_data_big_lookup_table,Y
+    LDY sound_data_11d4,X       ; get index of table byte
+    LDA sound_data_big_lookup_table,Y ; fetch table byte
 .L13CC
-    STA sound_data_11bc,X
-    INY
+    STA sound_channel_counters,X       ; store channel's data2
+    INY                         ; next table byte
     TYA
-    STA sound_data_11b4,X
+    STA sound_channel_table_indexes,X ; update channel's big lookup table index
 .L13D4
-    LDA sound_duration,X
-    STA used_in_sound
+    LDA sound_duration,X        ; get channel's duration
+    STA used_in_sound           ;
     ADC sound_data_big_lookup_table,Y
     STA sound_duration,X
-    DEC sound_data_11bc,X
+    DEC sound_channel_counters,X
     SEC
+    ; leave with C=1 and A=channel's sound_duration
 .process_sound_out
     RTS
 }
 
 
 .push_sound_to_chip
-    STA $FE4F
-    LDA #$00
-    STA $FE40
+{
+    STA $FE4F                   ; write value to sound chip
+    LDA #$00                    
+    STA $FE40                   ; latch B0=0 - enable sound write
     LDA #$22
+    ;  delay ~10 cycles and finish up with A=8
 .L13EE
     LSR A
     BCC L13EE
-    STA $FE40
+    STA $FE40                   ; latch B0=1 - disable sound write
 .L13F4
+    ; delay ~20 cycles
     LSR A
     BCC L13F4
     RTS
-    
+}
+
 .play_sound2
+; play_sound2 enters the routine with carry set rather than clear.
+; (this always picks channel 0... presumably play_sound2 is then the
+; entry point for noises rather than tones?)
     SEC
     equb $24; BIT &xx            BIT &18 ; wall_collision_bottom_minus_top
 .play_sound
     CLC
-    STA temp_a_OR_supporting_object_xy ; temp_a                ; store registers
+    ; store registers
+    STA temp_a_OR_supporting_object_xy ; temp_a
     STX velocity_signs_OR_pixel_colour ; temp_x
-    STY zp_various_9a ; temp_y
-    PHP ; push processor status
-    PLA ; and pull it back again
-    TAX ; X is processor status
-    PLA
+    STY zp_various_9a                  ; temp_y
+    PHP                                ; push processor status
+    PLA                                ; and pull it back again
+    TAX                                ; X is processor status
+    PLA                                ; get old PCL
     STA zp_various_9b ; sound_data_l          ; &9b is lsb of sound data
     CLC
-    ADC #$04
-    TAY ; Y is lsb of new return address
-    PLA
+    ADC #$04                    ; PCL+4
+    TAY                         ; Y is lsb of new return address
+    PLA                         ; get old PCH
     STA zp_various_9c ; sound_data_h          ; &9c is msb of sound data
-    ADC #$00
-    PHA ; push msb of new return address
-    TYA
-    PHA ; push lsb of new return address
-    TXA
-    PHA ; push processor status
+    ADC #$00          ; carry
+    PHA               ; push msb of new return address
+    TYA               ; get new PCL
+    PHA               ; push lsb of new return address
+    TXA               ; get old status
+    PHA               ; push processor status
     JSR get_object_distance_from_screen_centre
-    CMP #$10 ; is it too far away?
-    BCS play_sound_out      ; if so, it makes no noise
+    CMP #$10                    ; is it too far away?
+    BCS play_sound_out          ; if so, it makes no noise
     ASL A
     ASL A
     ASL A
     ASL A
-    TAY ; Y = distance * 16
-    PLP ; pull processor status
-    BCC L142D
-    LDX #$00
-    LDA sound_duration_low
-    BEQ L1464 ; sound_slot_found
-    BCS find_sound_slot_loop
+    TAY                         ; Y = distance * 16
+    PLP                         ; pull processor status
+    BCC L142D                   ; taken if entry point was play_sound
+    LDX #$00                    ; channel 0
+    LDA sound_duration_low      ; sound_duration_low for channel 0
+    BEQ sound_slot_found        ; use channel 0
+    BCS find_sound_slot_loop    ; JMP, in effect
 .L142D
-    LDX sound_max_channels
+    LDX sound_max_channels      ; start from max channel
 .L1430
-    LDA sound_duration_low,X
-    BEQ L1464 ; sound_slot_found
-    DEX
-    BNE L1430
-    LDA sound_data_11dc+5
-    EOR sound_data_11dc+6
-    EOR sound_data_11dc+7
-    LDX sound_max_channels
+    LDA sound_duration_low,X    ; get channel's entry
+    BEQ sound_slot_found        ; taken if this channel isn't in use
+    DEX                         ; next channel
+    BNE L1430                   ; loop until channel 1 inclusive some
+    LDA sound_channel_data_ls+1 ; wat
+    EOR sound_channel_data_ls+2 ; wat
+    EOR sound_channel_data_ls+3 ; wat
+    LDX sound_max_channels      ; start from max channel
 .L1444
-    CMP sound_data_11dc+4,X
+    CMP sound_channel_data_ls,X ; 
     BEQ L145E
     DEX
     BNE L1444
     LDX sound_max_channels
 .find_sound_slot_loop
-    TYA ; A = distance * 16
-    CMP sound_data_11dc+1,X
-    BEQ L1464 ; sound_slot_found
-    BCC L1464 ; sound_slot_found
-    DEX
-    BEQ play_sound_out2     ; couldn't find a slot
-    BPL find_sound_slot_loop
-    BMI play_sound_out2     ; couldn't find a slot
+    TYA                         ; A = distance * 16
+    CMP sound_channel_distances+1,X
+    BEQ sound_slot_found        ; taken if new sound is same distance
+    BCC sound_slot_found        ; taken if new sound is closer
+    DEX                         ; next channel
+    BEQ play_sound_out2         ; taken if couldn't find a slot
+    BPL find_sound_slot_loop    ; taken if more slots left
+    BMI play_sound_out2         ; JMP, in effect
 .L145E
-    DEX
-    BNE L1464 ; sound_slot_found
-    LDX sound_max_channels
-;;  sound_slot_found                                      ; X =
-.L1464
-    TYA ; A = distance * 16
-    STA sound_data_11dc,X
-    LDA zp_various_9b ; sound_data_l
-    STA sound_data_11dc+4,X
-    LDY #$01
+    DEX                         ; next channel
+    BNE sound_slot_found        ; taken if more channels left
+    LDX sound_max_channels      ; max channel
+.sound_slot_found
+    TYA                           ; A = distance * 16
+    STA sound_channel_distances,X ; store distance
+    LDA zp_various_9b             ; sound_data_l
+    STA sound_channel_data_ls,X   ; store sound_data_l
+
+    LDY #$01                      ; offset=1 - JSR pushes PC-1...
     PHP
     SEI
 .L1471
-    LDA (zp_various_9b),Y ; sound_data        ; pitch increase?
-    STA sound_data_11b4,X
-    INY
-    LDA (zp_various_9b),Y ; sound_data
-    AND #$F0
-    STA sound_duration,X
-    EOR (zp_various_9b),Y ; sound_data
-    STA sound_duration_low,X
-    INY
-    LDA #$00
-    STA sound_data_11bc,X
-    STA sound_data_11c4,X
+    LDA (zp_various_9b),Y ; sound_data+0, sound_data+2 - pitch
+                          ; increase?
+    STA sound_channel_table_indexes,X ; 
+    INY                   ;
+    LDA (zp_various_9b),Y ; sound_data+1, sound_data+3
+    AND #$F0              ; top 4 bits
+    STA sound_duration,X  ; store it
+    EOR (zp_various_9b),Y ; bottom 4 bits
+    STA sound_duration_low,X    ; store it
+    INY                         ; 
+    LDA #$00                    ; 
+    STA sound_channel_counters,X       ; 
+    STA sound_data_11c4,X       ; 
     INX
     INX
     INX
     INX
-    CPX #$08
-    BCC L1471
+    CPX #$08                    ; 
+    BCC L1471                   ; taken if X<8
 .play_sound_out
-    PLP ; restore processor status
+    PLP                         ; restore processor status
 .play_sound_out2
     LDA temp_a_OR_supporting_object_xy ; temp_a                ; restore registers
     LDX velocity_signs_OR_pixel_colour ; temp_x
@@ -7227,19 +7322,21 @@ ENDIF
     BCC L2DB2
     RTS
 .sound_data_big_lookup_table
-    equb $88,$03,$10,$03,$F0,$80,$03,$C0,$01,$04,$05,$06,$82,$0C,$FE,$03
-    equb $03,$80,$01,$F9,$02,$01,$02,$FF,$08,$F0,$08,$F8,$01,$FB,$87,$03
-    equb $A1,$03,$81,$80,$83,$02,$A3,$02,$81,$80,$3E,$00,$01,$06,$0A,$0C
-    equb $0A,$00,$78,$FE,$0F,$10,$0F,$F4,$F8,$04,$02,$05,$FE,$80,$08,$F0
-    equb $0A,$F8,$0C,$FC,$92,$03,$02,$03,$01,$03,$00,$03,$FF,$03,$FE,$80
-    equb $03,$03,$03,$01,$03,$00,$0C,$FF,$04,$20,$05,$10,$05,$08,$04,$E0
-    equb $05,$F0,$05,$F8,$E1,$01,$F8,$08,$01,$E1,$01,$1A,$0D,$FE,$80,$01
-    equb $18,$64,$00,$88,$02,$00,$01,$40,$02,$00,$01,$BC,$90,$03,$00,$01
-    equb $0C,$03,$00,$01,$F4,$80,$10,$00,$01,$2F,$10,$00,$01,$F9,$10,$00
-    equb $01,$F1,$83,$10,$F0,$87,$04,$20,$02,$FD,$02,$C0,$80,$0B,$14,$83
-    equb $03,$F0,$03,$10,$80,$03,$BC,$07,$06,$82,$02,$FE,$04,$02,$80,$11
-    equb $FF,$0B,$14,$01,$02,$02,$83,$0A,$03,$04,$09,$88,$01,$0B,$01,$E0
-    equb $01,$15,$AC,$01,$14,$01,$EC,$80,$10,$FF,$14,$F8,$28,$02,$01,$00
+; 208 bytes
+;        00  01  02  03  04  05  06  07  08  09  0a  0b  0c  0d  0e  0f 
+    equb $88,$03,$10,$03,$F0,$80,$03,$C0,$01,$04,$05,$06,$82,$0C,$FE,$03 ; 0
+    equb $03,$80,$01,$F9,$02,$01,$02,$FF,$08,$F0,$08,$F8,$01,$FB,$87,$03 ; 1
+    equb $A1,$03,$81,$80,$83,$02,$A3,$02,$81,$80,$3E,$00,$01,$06,$0A,$0C ; 2
+    equb $0A,$00,$78,$FE,$0F,$10,$0F,$F4,$F8,$04,$02,$05,$FE,$80,$08,$F0 ; 3
+    equb $0A,$F8,$0C,$FC,$92,$03,$02,$03,$01,$03,$00,$03,$FF,$03,$FE,$80 ; 4
+    equb $03,$03,$03,$01,$03,$00,$0C,$FF,$04,$20,$05,$10,$05,$08,$04,$E0 ; 5
+    equb $05,$F0,$05,$F8,$E1,$01,$F8,$08,$01,$E1,$01,$1A,$0D,$FE,$80,$01 ; 6
+    equb $18,$64,$00,$88,$02,$00,$01,$40,$02,$00,$01,$BC,$90,$03,$00,$01 ; 7
+    equb $0C,$03,$00,$01,$F4,$80,$10,$00,$01,$2F,$10,$00,$01,$F9,$10,$00 ; 8
+    equb $01,$F1,$83,$10,$F0,$87,$04,$20,$02,$FD,$02,$C0,$80,$0B,$14,$83 ; 9
+    equb $03,$F0,$03,$10,$80,$03,$BC,$07,$06,$82,$02,$FE,$04,$02,$80,$11 ; a
+    equb $FF,$0B,$14,$01,$02,$02,$83,$0A,$03,$04,$09,$88,$01,$0B,$01,$E0 ; b
+    equb $01,$15,$AC,$01,$14,$01,$EC,$80,$10,$FF,$14,$F8,$28,$02,$01,$00 ; c
 .can_we_scroll_screen
     equb $FF
 ;;  &2e88 = chatter_pitch
