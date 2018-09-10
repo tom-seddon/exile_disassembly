@@ -9,9 +9,9 @@ in a BeebAsm-friendly way, so the build process is a bit Heath
 Robinson. But, if you manage to make it work, you should be rewarded
 with two files matching the originals:
 
-=$.EXILEB= SHA1: ede3f7bbe3bf6b001776ab53fbd7f8488c7489f1
+=./tmp/exileb.new=, matching =$.EXILEB=, with SHA1: ede3f7bbe3bf6b001776ab53fbd7f8488c7489f1
 
-=$.EXILEMC= SHA1: 7768adb6154f064a0ee413dab92c63c31236fae7
+=./tmp/exilemc.new=, matching =$.EXILEMC=, with SHA1: 7768adb6154f064a0ee413dab92c63c31236fae7
 
 * To build
 
