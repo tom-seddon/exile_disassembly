@@ -1,0 +1,36 @@
+{
+    "extends": "tslint:recommended",
+    "rules": {
+        "await-promise": true,
+        "no-floating-promises": true,
+        "ordered-imports": false,
+        "quotemark": [
+            false
+        ],
+        "max-line-length": [
+            false
+        ],
+        "no-consecutive-blank-lines": false,
+        "comment-format": [
+            false
+        ],
+        "whitespace": [
+            false,
+            "check-separator"
+        ],
+        "no-trailing-whitespace": [
+            true,
+            "ignore-blank-lines",
+            "ignore-comments"
+        ],
+        "no-bitwise": false,
+        "array-type": false,
+        "no-unused-expression": true,
+        "trailing-comma": false,
+        "max-classes-per-file": false,
+        "promise-function-async": true,
+        "strict-boolean-expressions": true,
+        "variable-name": false,
+        "object-literal-sort-keys": false
+    }
+}
