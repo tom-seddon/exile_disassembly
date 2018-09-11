@@ -14,7 +14,8 @@ import * as path from 'path';
 // -----
 //
 // All graphics are stretched 2x horizontally to account for the Mode 2 aspect
-// ratio.
+// ratio. This is mostly transparent but there's a couple of '>>1' in the sprite
+// plot routine.
 
 /////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
@@ -103,6 +104,8 @@ const gSpritePNGs: pngjs.PNG[] = [];
 
 // exports from $.EXILEB
 const EXILEB_EXPORTS = {
+    square_sprite: 0x08,
+    square_orientation: 0x09,
     square_x: 0x95,
     square_y: 0x97,
     determine_background: 0x1715,
@@ -120,6 +123,7 @@ const EXILEB_EXPORTS = {
     background_lookup: 0x114f,
     background_objects_handler_lookup: 0x6ee,
     lookup_for_unmatched_hash: 0x117c,
+    setup_background_sprite_values: 0x2398,
 
 };
 
@@ -134,6 +138,25 @@ function newExileCPU(): CPU.CPU {
     assert.ok(cpu.read16(0x204) === 0x12a6);
 
     return cpu;
+}
+
+function callRoutine(cpu: CPU.CPU, addr: number): void {
+    const thunk = 0xf000;
+
+    cpu.mem[thunk + 0] = 0x20;
+    cpu.mem[thunk + 1] = addr & 0xff;
+    cpu.mem[thunk + 2] = (addr >> 8) & 0xff;
+
+    cpu.pc = thunk;
+
+    while (cpu.pc !== thunk + 3) {
+        //pn(cpu.getDescription());
+        cpu.step();
+    }
+}
+
+function savePNG(png: pngjs.PNG, filePath: string): void {
+    fs.writeFileSync(filePath, pngjs.PNG.sync.write(png));
 }
 
 function getPixel(png: pngjs.PNG, x: number, y: number): number[] {
@@ -167,20 +190,92 @@ function setPixel(png: pngjs.PNG, x: number, y: number, pixel: number[]) {
     }
 }
 
-function putSprite(destPNG: pngjs.PNG, destX: number, destY: number, spritePNG: pngjs.PNG, flipX: boolean, flipY: boolean): void {
-    for (let y = 0; y < spritePNG.height; ++y) {
-        let srcY = y;
+// function putSprite(destPNG: pngjs.PNG, destX: number, destY: number, spritePNG: pngjs.PNG, flipX: boolean, flipY: boolean): void {
+//     for (let y = 0; y < spritePNG.height; ++y) {
+//         let srcY = y;
+//         if (flipY) {
+//             srcY = spritePNG.height - 1 - srcY;
+//         }
+
+//         for (let x = 0; x < spritePNG.width; ++x) {
+//             let srcX = x;
+//             if (flipX) {
+//                 srcX = spritePNG.width - 1 - srcX;
+//             }
+
+//             setPixel(destPNG, destX + x, destY + y, getPixel(spritePNG, srcX, srcY));
+//         }
+//     }
+// }
+
+function mustBeValidSprite(sprite: number): void {
+    assert.ok(sprite >= 0 && sprite < 0x80, 'invalid sprite');
+}
+
+function getSpriteWidth(sprite: number): number {
+    mustBeValidSprite(sprite);
+
+    return (1 + (gExile[X.sprite_width_lookup + sprite] >> 4)) * 2;
+}
+
+function getSpriteHeight(sprite: number): number {
+    mustBeValidSprite(sprite);
+
+    return 1 + (gExile[X.sprite_height_lookup + sprite] >> 3);
+}
+
+function putSprite(
+    destPNG: pngjs.PNG,
+    destX: number,
+    destY: number,
+    sprite: number,
+    flipX: boolean,
+    flipY: boolean,
+    palette: number[][]): void {
+    mustBeValidSprite(sprite);
+
+    const width = getSpriteWidth(sprite);
+    const height = getSpriteHeight(sprite);
+
+    const a = gExile[X.sprite_offset_a_lookup + sprite];
+    const b = gExile[X.sprite_offset_b_lookup + sprite];
+
+    const srcY = b >> 3 | (b & 7) << 5;
+
+    let srcX = a >> 6 | (a & 7) << 2;
+    srcX <<= 2;
+    srcX += a >> 4 & 3;
+
+    assert.ok(srcX >= 0 && srcX + (width >> 1) <= SPRITES_WIDTH, 'X bork: srcX=' + srcX + ', width=' + width);
+    assert.ok(srcY >= 0 && srcY + height <= SPRITES_HEIGHT, 'Y bork: srcY=' + srcY + ', height=' + height);
+
+    for (let destDY = 0; destDY < height; ++destDY) {
+        let srcDY = destDY;
         if (flipY) {
-            srcY = spritePNG.height - 1 - srcY;
+            srcDY = height - 1 - srcDY;
         }
 
-        for (let x = 0; x < spritePNG.width; ++x) {
-            let srcX = x;
+        for (let destDX = 0; destDX < width; ++destDX) {
+            let srcDX = destDX;
             if (flipX) {
-                srcX = spritePNG.width - 1 - srcX;
+                srcDX = width - 1 - srcDX;
             }
 
-            setPixel(destPNG, destX + x, destY + y, getPixel(spritePNG, srcX, srcY));
+            const x = srcX + (srcDX >> 1);// >>1 to cater for the width doubling...
+            const y = srcY + srcDY;
+
+            const value = gExile[X.sprite_data + ((y * SPRITES_WIDTH + x) >> 2)] << (x & 3);
+
+            let pixel = 0;
+            if ((value & 0x80) !== 0) {
+                pixel |= 2;
+            }
+
+            if ((value & 0x08) !== 0) {
+                pixel |= 1;
+            }
+
+            setPixel(destPNG, destX + destDX, destY + destDY, palette[pixel]);
         }
     }
 }
@@ -189,7 +284,14 @@ function makeBeebColour(index: number): number[] {
     return [(index & 1) !== 0 ? 1 : 0, (index & 2) !== 0 ? 1 : 0, (index & 4) !== 0 ? 1 : 0];
 }
 
-function doSprites(): void {
+const DEFAULT_PALETTE = [
+    makeBeebColour(0),
+    makeBeebColour(1),
+    makeBeebColour(7),
+    makeBeebColour(2),
+];
+
+function doSpritePage(): void {
     const spritesPNG = new pngjs.PNG({ colorType: PNG_COLOUR_TYPE_RGBA, width: SPRITES_WIDTH * 2, height: SPRITES_HEIGHT });
 
     const palette = [];
@@ -220,36 +322,17 @@ function doSprites(): void {
         }
     }
 
-    try {
-        fs.mkdirSync('./output/');
-    } catch (error) {
-        if (error.code !== 'EEXIST') {
-            throw error;
-        }
-    }
-
     fs.writeFileSync('./output/sprite_page.png', pngjs.PNG.sync.write(spritesPNG));
+}
 
+function doSprites(): void {
     for (let sprite = 0; sprite < NUM_SPRITES; ++sprite) {
-        const width = 1 + (gExile[X.sprite_width_lookup + sprite] >> 4);
-        const height = 1 + (gExile[X.sprite_height_lookup + sprite] >> 3);
-        const a = gExile[X.sprite_offset_a_lookup + sprite];
-        const b = gExile[X.sprite_offset_b_lookup + sprite];
+        const width = getSpriteWidth(sprite);
+        const height = getSpriteHeight(sprite);
 
-        const y = b >> 3 | (b & 7) << 5;
-
-        let x = a >> 6 | (a & 7) << 2;
-        x <<= 2;
-        x += a >> 4 & 3;
-
-        const id = sprite.toString(16).padStart(2, '0');
-
-        //pn(id + ': (' + x + ',' + y + '), ' + width + ' x ' + height);
-
-        const spritePNG = new pngjs.PNG({ colorType: PNG_COLOUR_TYPE_RGBA, width: width * 2, height });
-        spritesPNG.bitblt(spritePNG, x * 2, y, spritePNG.width, spritePNG.height);
-        fs.writeFileSync('./output/' + id + '.png', pngjs.PNG.sync.write(spritePNG));
-
+        const spritePNG = new pngjs.PNG({ colorType: PNG_COLOUR_TYPE_RGBA, width, height });
+        putSprite(spritePNG, 0, 0, sprite, false, false, DEFAULT_PALETTE);
+        savePNG(spritePNG, './output/' + hex2(sprite) + '.png');
         gSpritePNGs.push(spritePNG);
     }
 }
@@ -567,33 +650,41 @@ function determineBackground(squareX: number, squareY: number): number {
     return squareSprite;
 }
 
-function callRoutine(cpu: CPU.CPU, addr: number): void {
-    const thunk = 0xf000;
-
-    cpu.mem[thunk + 0] = 0x20;
-    cpu.mem[thunk + 1] = addr & 0xff;
-    cpu.mem[thunk + 2] = (addr >> 8) & 0xff;
-
-    cpu.pc = thunk;
-
-    while (cpu.pc !== thunk + 3) {
-        //pn(cpu.getDescription());
-        cpu.step();
-    }
+interface IBackground {
+    squareSprite: number;
+    squareOrientation: number;
 }
 
-function determineBackground6502(square_x: number, square_y: number): number {
-    mustBeBytes(square_x, square_y);
+function determineBackground6502(squareX: number, squareY: number): IBackground {
+    mustBeBytes(squareX, squareY);
 
     const cpu = newExileCPU();
 
-    cpu.pc = X.determine_background;
-    cpu.write8(X.square_x, square_x);
-    cpu.write8(X.square_y, square_y);
+    cpu.write8(X.square_x, squareX);
+    cpu.write8(X.square_y, squareY);
     callRoutine(cpu, X.determine_background);
 
-    return cpu.a;
+    assert.ok(cpu.read8(X.square_sprite) === cpu.a);
+
+    const result = {
+        squareSprite: cpu.read8(X.square_sprite),
+        squareOrientation: cpu.read8(X.square_orientation),
+    };
+
+    return result;
 }
+
+// function setupBackgroundSpriteValues6502(squareX: number, squareY: number): IBackground {
+//     mustBeBytes(squareX, squareY);
+
+//     const cpu = newExileCPU();
+
+//     cpu.write8(X.square_x, squareX);
+//     cpu.write8(X.square_y, squareY);
+//     callRoutine(cpu, X.setup_background_sprite_values);
+
+
+// }
 
 /////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
@@ -651,16 +742,20 @@ function doBackground() {
     const miniMapPNG = new pngjs.PNG({ colorType: PNG_COLOUR_TYPE_RGBA, width: 256, height: 256 });
     const fullMapPNG = new pngjs.PNG({ colorType: PNG_COLOUR_TYPE_RGBA, width: 256 * 32, height: 256 * 32 });
 
-    const backgroundSpriteRows: number[][] = [];
+    const backgrounds: IBackground[][] = [];
     let numFlipped = 0;
+
 
     for (let squareY = 0; squareY < 256; ++squareY) {
         p('squareY: ' + hex2(squareY) + '\r');
-        const backgroundSpriteCols: number[] = [];
-        backgroundSpriteRows.push(backgroundSpriteCols);
+        if (process.stderr.isTTY !== true) {
+            pn('');
+        }
+        const backgroundRow: IBackground[] = [];
+        backgrounds.push(backgroundRow);
         for (let squareX = 0; squareX < 256; ++squareX) {
-            const backgroundSprite = determineBackground6502(squareX, squareY);
-            backgroundSpriteCols.push(backgroundSprite);
+            const background = determineBackground6502(squareX, squareY);
+            backgroundRow.push(background);
 
             //pn('(' + squareX + ',' + squareY + '): ' + MapResultType[r.type]);
 
@@ -701,16 +796,47 @@ function doBackground() {
 
             // setPixel(miniMapPNG, squareX, squareY, pixel);
 
-            const sprite = backgroundSprite & 0x3f;
-            const orientation = backgroundSprite & 0xc0;
+            // const sprite = backgroundSprite & 0x3f;
+            // const orientation = backgroundSprite & 0xc0;
 
-            const actualSprite = gExile[X.background_sprite_lookup + sprite];
+            const actualSprite = gExile[X.background_sprite_lookup + background.squareSprite] & 0x7f;
 
-            if ((actualSprite & 0x80) !== 0) {
-                ++numFlipped;
+            // if ((actualSprite & 0x80) !== 0) {
+            //     ++numFlipped;
+            // }
+
+            let spriteX = squareX * 32;
+            let spriteY = squareY * 32;
+            let flipX = false;
+            let flipY = false;
+
+            
+            switch (background.squareOrientation & 0xc0) {
+                case 0x00:
+                    // 00 = bottom left, unflipped
+                    flipX = true;
+                    spriteY += 32 - getSpriteHeight(actualSprite);
+                    break;
+
+                case 0x40:
+                    // 40 = top left, vertical flip
+                    flipY = true;
+                    break;
+
+                case 0x80:
+                    // 80 = bottom right, horizontal flip
+                    spriteX += 32 - getSpriteWidth(actualSprite);
+                    spriteY += 32 - getSpriteHeight(actualSprite);
+                    break;
+
+                case 0xc0:
+                    // c0 = top right, vertical & horizontal flip
+                    spriteX += 32 - getSpriteWidth(actualSprite);
+                    flipY = true;
+                    break;
             }
 
-            putSprite(fullMapPNG, squareX * 32, squareY * 32, gSpritePNGs[actualSprite & 0x7f], false, (actualSprite & 0x80) !== 0);
+            putSprite(fullMapPNG, spriteX, spriteY, actualSprite, flipX, flipY, DEFAULT_PALETTE);
 
             // const spritePNG = gSpritePNGs[actualSprite & 0x7f];
             // spritePNG.bitblt(fullMapPNG, 0, 0, spritePNG.width, spritePNG.height, squareX * 32, squareY * 32);
@@ -729,24 +855,25 @@ function doBackground() {
     pn('numFlipped=' + numFlipped);
 
     pn('Save mini map...');
-    fs.writeFileSync('./output/map1.png', pngjs.PNG.sync.write(miniMapPNG));
+    savePNG(miniMapPNG, './output/map1.png');
 
     pn('Save full map...');
-    fs.writeFileSync('./output/bigmap.png', pngjs.PNG.sync.write(fullMapPNG));
+    savePNG(fullMapPNG, './output/bigmap.png');
 
     for (let squareY = 0; squareY < 256; ++squareY) {
         for (let squareX = 0; squareX < 256; ++squareX) {
             const x = squareX * 32;
             const y = squareY * 32;
+            const background = backgrounds[squareY][squareX];
 
-            printStr(fullMapPNG, x, y, hex2(squareX));
-            printStr(fullMapPNG, x, y + 8, hex2(squareY));
-            printStr(fullMapPNG, x, y + 16, hex2(backgroundSpriteRows[squareY][squareX]));
+            printStr(fullMapPNG, x, y, hex2(squareX) + hex2(squareY));
+            printStr(fullMapPNG, x, y + 8, hex2(background.squareSprite) + hex2(background.squareOrientation));
+            printStr(fullMapPNG, x, y + 16, hex2(gExile[X.background_sprite_lookup + background.squareSprite]));
         }
     }
 
     pn('Save full map + overlay...');
-    fs.writeFileSync('./output/bigmap_overlay.png', pngjs.PNG.sync.write(fullMapPNG));
+    savePNG(fullMapPNG, './output/bigmap_overlay.png');
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -771,6 +898,15 @@ async function main(options: ICommandLineOptions) {
     gExile = Buffer.alloc(0x100 + exileb.length);
     exileb.copy(gExile, 0x100);
 
+    try {
+        fs.mkdirSync('./output/');
+    } catch (error) {
+        if (error.code !== 'EEXIST') {
+            throw error;
+        }
+    }
+
+    doSpritePage();
     doSprites();
     doBackground();
 }
