@@ -3945,6 +3945,8 @@ ENDIF
 .L1711
     STY water_level_on_screen
     RTS
+
+
 ;;  returns A = background type for square
 .determine_background
     LDX #$00
@@ -3956,30 +3958,51 @@ ENDIF
     STA square_orientation
     EOR square_sprite ; = calculate_background &3f
     CMP #$09
-    BCS no_background_object                        ; is there a hash table point in this square?
+    BCS no_background_object
+
+; is there a hash table point in this square?
+
     STA zp_various_9d ; background_object_number
-    TAY ; a = 0 - 8
-    LDX background_objects_range,Y                   ; use background_objects_range to determine where to look
-    LDA background_objects_x_lookup,X             ; in background_objects_x_lookup
-    PHA ; backup value of background_objects_x_lookup
-    LDA square_x
-    STA background_objects_x_lookup,X             ; push square_x at the end of this range
-    LDX background_objects_range_minus_one,Y
-    DEX
+    TAY               ; a = 0 - 8
+    LDX background_objects_range,Y ; use background_objects_range to
+                                   ; determine where to look
+    LDA background_objects_x_lookup,X ; in background_objects_x_lookup
+
+; Try to find square_x in the table. The range to search is from
+; (background_objects_range-1)[X] (inclusive) to
+; background_objects_range[X] (exclusive). To simplify the loop
+; condition, use a sentinel: set background_objects_range[X] to
+; square_x. Check after the loop whether it was an actual entry that
+; was found, or the sentinel.
+
+    PHA                  ; backup value of background_objects_x_lookup
+    LDA square_x         
+    STA background_objects_x_lookup,X ; push square_x at the end of
+                                      ; this range
+    LDX background_objects_range_minus_one,Y ; get start index
+    DEX                                      ; loop fudge
 .L173D
-    INX
-    CMP background_objects_x_lookup,X
-    BNE L173D ; X contains entry in background_objects_x_lookup with square_x
-    TXA
-    CMP background_objects_range,Y
-    BCS no_background_object_in_hash            ; if we found it beyond the end of the range, there's no entry
-    ADC background_objects_data_offset,Y               ; data_pointer = X + background_objects_data_offset
+    INX                               ;next item
+    CMP background_objects_x_lookup,X ;found square_x?
+    BNE L173D                         ;branch taken if square_x not
+                                      ;found
+    TXA                               ;A = index of entry
+    CMP background_objects_range,Y    ;is it the sentinel value?
+    BCS no_background_object_in_hash  ;taken if so - i.e., no entry
+
+; data_pointer = X + background_objects_data_offset
+
+    ADC background_objects_data_offset,Y 
     STA new_object_data_pointer
+
+; type_pointer = X + background_objects_data_offset + background_objects_type_offset
     CLC
-    ADC background_objects_type_offset,Y               ; type_pointer = X + background_objects_data_offset + background_objects_type_offset
+    ADC background_objects_type_offset,Y 
     STA new_object_type_pointer
+    
     LDA background_objects_handler_lookup,X
     JMP L1761 ; use_background_object_from_hash
+    
 .no_background_object_in_hash
     LDX zp_various_9d ; background_object_number
     LDA lookup_for_unmatched_hash,X
@@ -3987,13 +4010,20 @@ ENDIF
 ;;  use_background_object_from_hash                                               ; A = handler_lookup if in hash, square_sprite if not
 .L1761
     STA square_sprite
-    LDX background_objects_range,Y
-    PLA
-    STA background_objects_x_lookup,X             ; restore value of background_objects_x_hash
+
+; Undo sentinel.
+
+    LDX background_objects_range,Y    
+    PLA                               
+    STA background_objects_x_lookup,X 
+
+; Separate out orientation and sprite.
+
     LDA square_sprite
     AND #$C0
     STA square_orientation
     EOR square_sprite
+    
 .no_background_object
     STA square_sprite
     CMP #$10
@@ -4011,6 +4041,7 @@ ENDIF
     LDA square_sprite
 .no_objects_to_create
     RTS
+    
 ;;  First, determine whether we should use mapped data or not
 .calculate_background
     LDA square_y
@@ -4022,59 +4053,73 @@ ENDIF
     ADC square_x
     LSR A
     ADC square_y
-    STA zp_various_9d ; f_xy                                            ; f_xy is a function of square_x and square_y
-    TXA ; A = square_y
+    STA zp_various_9d    ; f_xy is a function of square_x and square_y
+    TXA                  ; A = square_y
     CMP #$79
-    BCC L17A8
-    CMP #$BF ; y >= &80
-    BCC not_mapped2
+    BCC L17A8                   ; taken if square_y<0x79
+    CMP #$BF
+    BCC not_mapped2             ; taken if square_y<0xbf
+
+; before: square_y = 0xc0 ... 0xff
+; after:  square_y = 0x7a ... 0xb9
+
     SBC #$46 ; y >= &c0 ; y -= &46;
+    
 .L17A8
+; A = square_y
     CMP #$48
-    BCS L17B2
+    BCS L17B2                   ; taken if square_y>=0x48
     CMP #$3E
-    BCS not_mapped2
+    BCS not_mapped2             ; taken if square_y>=0x3e
+
+; before: square_y = 0x00 ... 0x3d
+; after:  square_y = 0x0a ... 0x47
+
     ADC #$0A
+    
 .L17B2
-    STA f2_xy                                         ; at this point, a function of square_y
-    AND #$A8
-    EOR #$6F
+    STA f2_xy                  ; at this point, a function of square_y
+    AND #%10101000                   
+    EOR #%01101111
     LSR A
     ADC square_x
-    EOR #$60
-    ADC #$28
-    STA f3_xy                                         ; f3_xy is another function of square_x and square_y
-    AND #$38
-    EOR #$A4
+    EOR #%01100000
+    ADC #%00101000
+    STA f3_xy     ; f3_xy is another function of square_x and square_y
+    AND #%00111000
+    EOR #%10100100
     ADC f2_xy
-    STA f2_xy                                         ; f2_xy a function of square_x and square_y
-    TAY ; A is f2_xy
-    EOR #$2C
-    ADC f3_xy                                         ; A is a function of f2_xy and f3_xy
+    STA f2_xy              ; f2_xy a function of square_x and square_y
+    TAY                    ; A is f2_xy
+    EOR #%00101100
+    ADC f3_xy                   ; A is a function of f2_xy and f3_xy
     CPY #$20
-    BCS not_mapped2                                     ; if Y >= &20, don't use mapped data
+    BCS not_mapped2             ; taken if f2_xy>=0x20
     CMP #$20
-    BCS not_mapped                                  ; if A >= &20, don't use mapped data
+    BCS not_mapped              ; if A >= &20, don't use mapped data
     DEC square_is_mapped_data
-    TAY ; Y = A = f(f2_xy,f3_xy)
+    TAY                         ; Y = A = f(f2_xy,f3_xy)
     ASL A
     ASL A
     ASL A
     EOR f2_xy
-    STA map_address                                     ; &a4 = (A * 8) ^ &10;
-    TYA ; A = Y = f(f2_xy,f3_xy)
+    STA map_address             ; &a4 = (A * 8) ^ &10;
+    TYA                         ; A = Y = f(f2_xy,f3_xy)
     AND #$03
     ADC #HI(map_data)
-    STA map_address_high                        ; a5 = (A & 3) + &4f;
-    LDY #LO(map_data) ; $EC ; &4fec - &53ec
-    LDA (map_address),Y ; map_address                           ; use mapped data
+    STA map_address_high        ; a5 = (A & 3) + &4f;
+    LDY #LO(map_data)           ; $EC ; &4fec - &53ec
+    LDA (map_address),Y         ; use mapped data
     RTS
 .L17EC
     JMP L1937
 .via_return_background_empty
     JMP return_background_empty
-;;  If not mapped data, are we on or above the surface?
+    
+;  If not mapped data, are we on or above the surface?
+;
 .not_mapped
+; A = 
     CMP #$3D
     BCC via_return_background_empty
 .not_mapped2
@@ -4083,9 +4128,9 @@ ENDIF
     BEQ L17EC ; if square_y = &4e, return bushes
     CPX #$4F
     BNE below_surface
-    LDA square_x                                        ; if square_y = &4f, do surface
+    LDA square_x                ; if square_y = &4f, do surface
     CMP #$40
-    BEQ return_background_grass_frond           ; force (&40, &4f) to be a grass frond
+    BEQ return_background_grass_frond ; force (&40, &4f) to be a grass frond
     LDY #$01
     JMP via_background_is_114f_lookup_with_y        ; otherwise, return wall
 .return_background_grass_frond
