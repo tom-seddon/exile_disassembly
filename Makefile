@@ -11,11 +11,11 @@ DIFF:=diff --suppress-common-lines
 build_exile:
 	$(MKDIR) $(TMP)
 
-	$(BEEBASM) -i exileb.6502 -do $(TMP)/exileb.ssd
+	$(BEEBASM) -v -i exileb.6502 -do $(TMP)/exileb.ssd >$(TMP)/exileb.lst
 	$(DISKCONV) --not-emacs $(TMP)/exileb.ssd
 	cd $(TMP)/exileb/0 && $(CAT) BMAIN BINTRO > ../../exileb.new
 
-	$(BEEBASM) -i exilemc.6502 -do $(TMP)/exilemc.ssd
+	$(BEEBASM) -v -i exilemc.6502 -do $(TMP)/exilemc.ssd >$(TMP)/exilemc.lst
 	$(DISKCONV) --not-emacs $(TMP)/exilemc.ssd
 	cd $(TMP)/exilemc/0 && $(CAT) SRAM SROM SINIT2 SINIT > ../../exilemc.new
 
