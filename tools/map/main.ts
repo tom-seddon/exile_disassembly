@@ -12,10 +12,6 @@ import * as path from 'path';
 
 // Notes
 // -----
-//
-// All graphics are stretched 2x horizontally to account for the Mode 2 aspect
-// ratio. This is mostly transparent but there's a couple of '>>1' in the sprite
-// plot routine.
 
 /////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
@@ -72,7 +68,11 @@ function hex2(x: number): string {
 /////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
 
-// offsets are into $.EXILEB
+// 8-bit value as described in the do_the_plotting comments.
+const DEFAULT_PALETTE = 0x71;
+
+const SQUARE_WIDTH = 16;
+const SQUARE_HEIGHT = 32;
 
 const SPRITES_WIDTH = 128;
 const SPRITES_HEIGHT = 81;
@@ -106,6 +106,8 @@ const gSpritePNGs: pngjs.PNG[] = [];
 const EXILEB_EXPORTS = {
     square_sprite: 0x08,
     square_orientation: 0x09,
+    this_object_x_low: 0x4f,
+    this_object_y_low: 0x51,
     square_x: 0x95,
     square_y: 0x97,
     determine_background: 0x1715,
@@ -124,7 +126,7 @@ const EXILEB_EXPORTS = {
     background_objects_handler_lookup: 0x6ee,
     lookup_for_unmatched_hash: 0x117c,
     setup_background_sprite_values: 0x2398,
-
+    palette_value_to_pixel_lookup: 0xb79,
 };
 
 // (so in principle this could run off the contents of $.EXILEMC too.)
@@ -179,13 +181,27 @@ function getPixelValue(floatValue: number): number {
     }
 }
 
-function setPixel(png: pngjs.PNG, x: number, y: number, pixel: number[]) {
+function lerp(a: number, b: number, t: number): number {
+    return a + t * (b - a);
+}
+
+function setPixel(png: pngjs.PNG, x: number, y: number, pixel: number[], alpha?: number) {
     if (x >= 0 && x < png.width && y >= 0 && y < png.height) {
         const offset = (y * png.width + x) * 4;
 
-        png.data[offset + 0] = getPixelValue(pixel[0]);
-        png.data[offset + 1] = getPixelValue(pixel[1]);
-        png.data[offset + 2] = getPixelValue(pixel[2]);
+        const oldPixel = getPixel(png, x, y);
+
+        if (alpha === undefined) {
+            alpha = 1;
+        }
+
+        const r = lerp(oldPixel[0], pixel[0], alpha);
+        const g = lerp(oldPixel[1], pixel[1], alpha);
+        const b = lerp(oldPixel[2], pixel[2], alpha);
+
+        png.data[offset + 0] = getPixelValue(r);
+        png.data[offset + 1] = getPixelValue(g);
+        png.data[offset + 2] = getPixelValue(b);
         png.data[offset + 3] = 255;
     }
 }
@@ -215,13 +231,29 @@ function mustBeValidSprite(sprite: number): void {
 function getSpriteWidth(sprite: number): number {
     mustBeValidSprite(sprite);
 
-    return (1 + (gExile[X.sprite_width_lookup + sprite] >> 4)) * 2;
+    return 1 + (gExile[X.sprite_width_lookup + sprite] >> 4);
 }
 
 function getSpriteHeight(sprite: number): number {
     mustBeValidSprite(sprite);
 
     return 1 + (gExile[X.sprite_height_lookup + sprite] >> 3);
+}
+
+const BEEB_PALETTE: number[][] = [];
+for (let i = 0; i < 16; ++i) {
+    // Entries 8...15 aren't super-useful, but there's no harm in having them
+    // and maybe there'll turn out to be a need for them...
+    BEEB_PALETTE.push([(i & 1) !== 0 ? 1 : 0, (i & 2) !== 0 ? 1 : 0, (i & 4) !== 0 ? 1 : 0]);
+}
+
+function getRightMode2Pixel(value: number): number {
+    const a = (value & 0x40) !== 0 ? 8 : 0;
+    const b = (value & 0x10) !== 0 ? 4 : 0;
+    const c = (value & 0x04) !== 0 ? 2 : 0;
+    const d = (value & 0x01) !== 0 ? 1 : 0;
+
+    return a | b | c | d;
 }
 
 function putSprite(
@@ -231,7 +263,7 @@ function putSprite(
     sprite: number,
     flipX: boolean,
     flipY: boolean,
-    palette: number[][]): void {
+    palette: number): void {
     mustBeValidSprite(sprite);
 
     const width = getSpriteWidth(sprite);
@@ -261,44 +293,49 @@ function putSprite(
                 srcDX = width - 1 - srcDX;
             }
 
-            const x = srcX + (srcDX >> 1);// >>1 to cater for the width doubling...
+            const x = srcX + srcDX;
             const y = srcY + srcDY;
 
-            const value = gExile[X.sprite_data + ((y * SPRITES_WIDTH + x) >> 2)] << (x & 3);
+            let value = gExile[X.sprite_data + ((y * SPRITES_WIDTH + x) >> 2)] << (x & 3);
 
-            let pixel = 0;
-            if ((value & 0x80) !== 0) {
-                pixel |= 2;
+            let pixel;
+            switch (value & 0x88) {
+                default:
+                case 0x00:
+                    // background
+                    pixel = BEEB_PALETTE[0];
+                    break;
+
+                case 0x08:
+                    // pair right
+                    pixel = BEEB_PALETTE[getRightMode2Pixel(gExile[X.palette_value_to_pixel_lookup + (palette & 0x0f)])];
+                    break;
+
+                case 0x80:
+                    // pair left
+                    pixel = BEEB_PALETTE[getRightMode2Pixel(gExile[X.palette_value_to_pixel_lookup + (palette & 0x0f)] >> 1)];
+                    break;
+
+                case 0x88:
+                    // primary
+                    pixel = BEEB_PALETTE[palette >> 4 & 0x0f];
+                    break;
             }
 
-            if ((value & 0x08) !== 0) {
-                pixel |= 1;
-            }
-
-            setPixel(destPNG, destX + destDX, destY + destDY, palette[pixel]);
+            setPixel(destPNG, destX + destDX, destY + destDY, pixel);
         }
     }
 }
 
-function makeBeebColour(index: number): number[] {
-    return [(index & 1) !== 0 ? 1 : 0, (index & 2) !== 0 ? 1 : 0, (index & 4) !== 0 ? 1 : 0];
-}
-
-const DEFAULT_PALETTE = [
-    makeBeebColour(0),
-    makeBeebColour(1),
-    makeBeebColour(7),
-    makeBeebColour(2),
-];
-
 function doSpritePage(): void {
-    const spritesPNG = new pngjs.PNG({ colorType: PNG_COLOUR_TYPE_RGBA, width: SPRITES_WIDTH * 2, height: SPRITES_HEIGHT });
+    const spritesPNG = new pngjs.PNG({ colorType: PNG_COLOUR_TYPE_RGBA, width: SPRITES_WIDTH, height: SPRITES_HEIGHT });
 
-    const palette = [];
-    palette.push(makeBeebColour(0));
-    palette.push(makeBeebColour(1));
-    palette.push(makeBeebColour(7));
-    palette.push(makeBeebColour(2));
+    const palette = [
+        BEEB_PALETTE[0],
+        BEEB_PALETTE[1],
+        BEEB_PALETTE[2],
+        BEEB_PALETTE[7],
+    ];
 
     for (let y = 0; y < SPRITES_HEIGHT; ++y) {
         for (let x = 0; x < SPRITES_WIDTH; ++x) {
@@ -316,9 +353,7 @@ function doSpritePage(): void {
                 pixel |= 1;
             }
 
-            for (let i = 0; i < 2; ++i) {
-                setPixel(spritesPNG, x * 2 + i, y, palette[pixel]);
-            }
+            setPixel(spritesPNG, x, y, palette[pixel]);
         }
     }
 
@@ -674,17 +709,28 @@ function determineBackground6502(squareX: number, squareY: number): IBackground 
     return result;
 }
 
-// function setupBackgroundSpriteValues6502(squareX: number, squareY: number): IBackground {
-//     mustBeBytes(squareX, squareY);
+interface IBackground2 extends IBackground {
+    xLow: number;
+    yLow: number;
+}
 
-//     const cpu = newExileCPU();
+function setupBackgroundSpriteValues6502(squareX: number, squareY: number): IBackground2 {
+    mustBeBytes(squareX, squareY);
 
-//     cpu.write8(X.square_x, squareX);
-//     cpu.write8(X.square_y, squareY);
-//     callRoutine(cpu, X.setup_background_sprite_values);
+    const cpu = newExileCPU();
 
+    cpu.write8(X.square_x, squareX);
+    cpu.write8(X.square_y, squareY);
+    callRoutine(cpu, X.setup_background_sprite_values);
 
-// }
+    const result = {
+        squareSprite: cpu.read8(X.square_sprite),
+        squareOrientation: cpu.read8(X.square_orientation),
+        xLow: cpu.read8(X.this_object_x_low) >> 3,
+        yLow: cpu.read8(X.this_object_y_low) >> 3,
+    };
+    return result;
+}
 
 /////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
@@ -702,45 +748,113 @@ const TELETEXT_CHARS = [
     '......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|...XXX|......|......|......|......|......|......|......|......|......|......|..XXX.|......|......|......|......|......|......|......|......|.X....|.....X|......|......|......|......|......|......|......|..XXX.|......|.....X|......|.....X|......|......',
 ];
 
+const MINI_OTHER_CHARS = [
+    '...',
+    '...',
+    '...',
+    '...',
+    '...',
+];
+
+const MINI_DIGIT_CHARS = [
+    'XXX|XX.|XXX|XXX|X.X|XXX|XXX|XXX|XXX|XXX',
+    'X.X|.X.|..X|..X|X.X|X..|X..|..X|X.X|X.X',
+    'X.X|.X.|XXX|XXX|XXX|XXX|XXX|..X|XXX|XXX',
+    'X.X|.X.|X..|..X|..X|..X|X.X|..X|X.X|..X',
+    'XXX|XXX|XXX|XXX|..X|XXX|XXX|..X|XXX|XXX',
+];
+
+const MINI_ALPHA_CHARS = [
+    'XXX|XX.|XXX|XX.|XXX|XXX|XXX|X.X|XXX|XXX|X.X|X..|X.X|X.X|XXX|XXX|XXX|XX.|XXX|XXX|X.X|X.X|X.X|X.X|X.X|XXX',
+    'X.X|X.X|X..|X.X|X..|X..|X..|X.X|.X.|.X.|X.X|X..|XXX|XXX|X.X|X.X|X.X|X.X|X..|.X.|X.X|X.X|X.X|X.X|X.X|..X',
+    'XXX|XX.|X..|X.X|XXX|XXX|X.X|XXX|.X.|.X.|XX.|X..|XXX|XXX|X.X|XXX|X.X|XX.|XXX|.X.|X.X|X.X|XXX|.X.|XXX|.X.',
+    'X.X|X.X|X..|X.X|X..|X..|X.X|X.X|.X.|.X.|X.X|X..|X.X|XXX|X.X|X..|XXX|X.X|..X|.X.|X.X|.X.|XXX|X.X|.X.|X..',
+    'X.X|XX.|XXX|XX.|XXX|X..|XXX|X.X|XXX|XX.|X.X|XXX|X.X|X.X|XXX|X..|XX.|X.X|XXX|.X.|XXX|.X.|X.X|X.X|.X.|XXX',
+];
+
 function printStr(png: pngjs.PNG, startX: number, startY: number, str: string) {
     let chX = startX;
 
     const WHITE = [1, 1, 1];
+    const BLACK = [0, 0, 0];
 
     for (let chIdx = 0; chIdx < str.length; ++chIdx) {
         let c = str.charCodeAt(chIdx);
-        if (c < 32 || c >= 126) {
-            c = 32;
+
+        let chars: string[];
+        let index: number;
+
+        if (str[chIdx] >= 'A' && str[chIdx] <= 'Z') {
+            chars = MINI_ALPHA_CHARS;
+            index = (str.charCodeAt(chIdx) - 'A'.charCodeAt(0)) * 4;
+        } else if (str[chIdx] >= 'a' && str[chIdx] <= 'z') {
+            chars = MINI_ALPHA_CHARS;
+            index = (str.charCodeAt(chIdx) - 'a'.charCodeAt(0)) * 4;
+        } else if (str[chIdx] >= '0' && str[chIdx] <= '9') {
+            chars = MINI_DIGIT_CHARS;
+            index = (str.charCodeAt(chIdx) - '0'.charCodeAt(0)) * 4;
+        } else {
+            chars = MINI_OTHER_CHARS;
+            index = 0;
         }
 
-        const i = (c - 32) * 7;
-        for (let y = 0; y < 10; ++y) {
-            for (let x = 0; x < 6; ++x) {
+        for (let y = 0; y < 5; ++y) {
+            for (let x = 0; x < 4; ++x) {
                 const py = startY + y;
-                const px = startX + chIdx * 6 + x;
+                const px = startX + chIdx * 4 + x;
 
                 let pixel: number[];
 
-                if (TELETEXT_CHARS[y][i + x] === '.') {
-                    pixel = getPixel(png, px, py);
-                    pixel[0] *= 0.5;
-                    pixel[1] *= 0.5;
-                    pixel[2] *= 0.5;
-                } else {
+                if (x < 3 && chars[y][index + x] === 'X') {
                     pixel = WHITE;
+                } else {
+                    pixel = BLACK;
                 }
 
-                setPixel(png, px, py, pixel);
+                setPixel(png, px, py, pixel, 0.5);
             }
         }
 
-        chX += 6;
+        // for (let chIdx = 0; chIdx < str.length; ++chIdx) {
+        //     let c = str.charCodeAt(chIdx);
+        //     if (c < 32 || c >= 126) {
+        //         c = 32;
+        //     }
+
+        //     const i = (c - 32) * 7;
+        //     for (let y = 0; y < 10; ++y) {
+        //         for (let x = 0; x < 6; ++x) {
+        //             const py = startY + y;
+        //             const px = startX + chIdx * 6 + x;
+
+        //             let pixel: number[];
+
+        //             if (TELETEXT_CHARS[y][i + x] === '.') {
+        //                 pixel = getPixel(png, px, py);
+        //                 pixel[0] *= 0.5;
+        //                 pixel[1] *= 0.5;
+        //                 pixel[2] *= 0.5;
+        //             } else {
+        //                 pixel = WHITE;
+        //             }
+
+        //             setPixel(png, px, py, pixel);
+        //         }
+        //     }
+
+        //     chX += 6;
+        // }
     }
 }
 
 function doBackground() {
     const miniMapPNG = new pngjs.PNG({ colorType: PNG_COLOUR_TYPE_RGBA, width: 256, height: 256 });
-    const fullMapPNG = new pngjs.PNG({ colorType: PNG_COLOUR_TYPE_RGBA, width: 256 * 32, height: 256 * 32 });
+    
+    const fullMapPNG = new pngjs.PNG({ colorType: PNG_COLOUR_TYPE_RGBA, width: 256 * SQUARE_WIDTH, height: 256 * SQUARE_HEIGHT });
+    fullMapPNG.data.fill(0);
+    for (let i = 3; i < fullMapPNG.data.length; i += 4) {
+        fullMapPNG.data[i] = 255;
+    }
 
     const backgrounds: IBackground[][] = [];
     let numFlipped = 0;
@@ -805,36 +919,36 @@ function doBackground() {
             //     ++numFlipped;
             // }
 
-            let spriteX = squareX * 32;
-            let spriteY = squareY * 32;
+            let spriteX = squareX * SQUARE_WIDTH;
+            let spriteY = squareY * SQUARE_HEIGHT;
             let flipX = false;
             let flipY = false;
 
-            
-            switch (background.squareOrientation & 0xc0) {
-                case 0x00:
-                    // 00 = bottom left, unflipped
-                    flipX = true;
-                    spriteY += 32 - getSpriteHeight(actualSprite);
-                    break;
 
-                case 0x40:
-                    // 40 = top left, vertical flip
-                    flipY = true;
-                    break;
+            // switch (background.squareOrientation & 0xc0) {
+            //     case 0x00:
+            //         // 00 = bottom left, unflipped
+            //         flipX = true;
+            //         spriteY += 32 - getSpriteHeight(actualSprite);
+            //         break;
 
-                case 0x80:
-                    // 80 = bottom right, horizontal flip
-                    spriteX += 32 - getSpriteWidth(actualSprite);
-                    spriteY += 32 - getSpriteHeight(actualSprite);
-                    break;
+            //     case 0x40:
+            //         // 40 = top left, vertical flip
+            //         flipY = true;
+            //         break;
 
-                case 0xc0:
-                    // c0 = top right, vertical & horizontal flip
-                    spriteX += 32 - getSpriteWidth(actualSprite);
-                    flipY = true;
-                    break;
-            }
+            //     case 0x80:
+            //         // 80 = bottom right, horizontal flip
+            //         spriteX += 32 - getSpriteWidth(actualSprite);
+            //         spriteY += 32 - getSpriteHeight(actualSprite);
+            //         break;
+
+            //     case 0xc0:
+            //         // c0 = top right, vertical & horizontal flip
+            //         spriteX += 32 - getSpriteWidth(actualSprite);
+            //         flipY = true;
+            //         break;
+            // }
 
             putSprite(fullMapPNG, spriteX, spriteY, actualSprite, flipX, flipY, DEFAULT_PALETTE);
 
@@ -862,13 +976,13 @@ function doBackground() {
 
     for (let squareY = 0; squareY < 256; ++squareY) {
         for (let squareX = 0; squareX < 256; ++squareX) {
-            const x = squareX * 32;
-            const y = squareY * 32;
+            const x = squareX * SQUARE_WIDTH;
+            const y = squareY * SQUARE_HEIGHT;
             const background = backgrounds[squareY][squareX];
 
             printStr(fullMapPNG, x, y, hex2(squareX) + hex2(squareY));
-            printStr(fullMapPNG, x, y + 8, hex2(background.squareSprite) + hex2(background.squareOrientation));
-            printStr(fullMapPNG, x, y + 16, hex2(gExile[X.background_sprite_lookup + background.squareSprite]));
+            printStr(fullMapPNG, x, y + 6, hex2(background.squareSprite) + hex2(background.squareOrientation));
+            printStr(fullMapPNG, x, y + 12, hex2(gExile[X.background_sprite_lookup + background.squareSprite]));
         }
     }
 
