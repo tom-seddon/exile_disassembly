@@ -894,28 +894,28 @@ particles_unused=10*11
 ;;  & &7f = sprite
 ;;  & &80 = vertically flipped
 ;;       0   1    2  3   4   5   6   7   8   9   a   b   c   d   e   f
-    equb $C6,$CE,$C6,$C6,$C6,$BB,$C6,$18,$2D,$70,$6A,$C6,$23,$39,$C6,$62
-    equb $C0,$8E,$39,$44,$47,$26,$48,$49,$DF,$C6,$99,$9A,$25,$2B,$39,$3B
-    equb $3C,$55,$8E,$43,$34,$35,$27,$28,$29,$2A,$42,$BF,$40,$3D,$38,$36
-    equb $37,$3E,$33,$31,$2F,$30,$2C,$24,$32,$41,$45,$3A,$6A,$23,$60,$CC
+    equb $C6,$CE,$C6,$C6,$C6,$BB,$C6,$18,$2D,$70,$6A,$C6,$23,$39,$C6,$62 ; 0
+    equb $C0,$8E,$39,$44,$47,$26,$48,$49,$DF,$C6,$99,$9A,$25,$2B,$39,$3B ; 1
+    equb $3C,$55,$8E,$43,$34,$35,$27,$28,$29,$2A,$42,$BF,$40,$3D,$38,$36 ; 2
+    equb $37,$3E,$33,$31,$2F,$30,$2C,$24,$32,$41,$45,$3A,$6A,$23,$60,$CC ; 3
 .background_y_offset_lookup
 ;;       0   1    2  3   4   5   6   7   8   9   a   b   c   d   e   f
-    equb $00,$00,$00,$00,$00,$00,$00,$D0,$C5,$B0,$C7,$00,$06,$00,$00,$C0
-    equb $B0,$A0,$07,$08,$00,$04,$80,$C0,$70,$00,$B0,$80,$99,$08,$00,$80
-    equb $C0,$00,$A0,$03,$02,$82,$01,$41,$81,$C1,$04,$F0,$B0,$00,$03,$02
-    equb $82,$70,$06,$C0,$C5,$04,$80,$06,$80,$04,$99,$30,$C7,$06,$A9,$00
+    equb $00,$00,$00,$00,$00,$00,$00,$D0,$C5,$B0,$C7,$00,$06,$00,$00,$C0 ; 0
+    equb $B0,$A0,$07,$08,$00,$04,$80,$C0,$70,$00,$B0,$80,$99,$08,$00,$80 ; 1
+    equb $C0,$00,$A0,$03,$02,$82,$01,$41,$81,$C1,$04,$F0,$B0,$00,$03,$02 ; 2
+    equb $82,$70,$06,$C0,$C5,$04,$80,$06,$80,$04,$99,$30,$C7,$06,$A9,$00 ; 3
 .background_palette_lookup
 ;;       0   1    2  3   4   5   6   7   8   9   a   b   c   d   e   f
-    equb $80,$02,$91,$91,$91,$00,$91,$A8,$DC,$B8,$8C,$80,$C9,$4A,$80,$06
-    equb $88,$05,$04,$00,$02,$02,$02,$02,$02,$91,$03,$03,$02,$02,$00,$00
-    equb $00,$BC,$B1,$00,$00,$00,$01,$01,$01,$01,$00,$04,$04,$04,$04,$04
-    equb $04,$04,$02,$01,$01,$01,$02,$02,$02,$00,$00,$00,$82,$02,$64,$EE
+    equb $80,$02,$91,$91,$91,$00,$91,$A8,$DC,$B8,$8C,$80,$C9,$4A,$80,$06 ; 0
+    equb $88,$05,$04,$00,$02,$02,$02,$02,$02,$91,$03,$03,$02,$02,$00,$00 ; 1
+    equb $00,$BC,$B1,$00,$00,$00,$01,$01,$01,$01,$00,$04,$04,$04,$04,$04 ; 2
+    equb $04,$04,$02,$01,$01,$01,$02,$02,$02,$00,$00,$00,$82,$02,$64,$EE ; 3
 .background_wall_y_start_base_lookup
 ;;       0   1    2  3   4   5   6   7   8   9   a   b   c   d   e   f
-    equb $0F,$3A,$0F,$0F,$0F,$77,$0F,$F0,$B0,$F0,$C0,$0F,$00,$F0,$0F,$F0
-    equb $0F,$0F,$00,$06,$0F,$00,$77,$B3,$0F,$0F,$0F,$0F,$90,$06,$0F,$77
-    equb $B3,$F0,$0F,$10,$07,$70,$0B,$37,$73,$B0,$00,$0F,$B3,$0F,$10,$07
-    equb $70,$77,$00,$B3,$B0,$00,$77,$00,$77,$00,$90,$2C,$C0,$00,$90,$0F
+    equb $0F,$3A,$0F,$0F,$0F,$77,$0F,$F0,$B0,$F0,$C0,$0F,$00,$F0,$0F,$F0 ; 0
+    equb $0F,$0F,$00,$06,$0F,$00,$77,$B3,$0F,$0F,$0F,$0F,$90,$06,$0F,$77 ; 1
+    equb $B3,$F0,$0F,$10,$07,$70,$0B,$37,$73,$B0,$00,$0F,$B3,$0F,$10,$07 ; 2
+    equb $70,$77,$00,$B3,$B0,$00,$77,$00,$77,$00,$90,$2C,$C0,$00,$90,$0F ; 3
 .background_wall_y_start_lookup
 ;;  Add &100 to get address in wall_base_y_lookup
 ;;        --  -V  H-  HV
@@ -1931,18 +1931,18 @@ RTS
     CPX #$02                    
     BCC plot_sprite_continued   ; taken if X<2 (and therefore done)
     LDY this_object_sprite-2,X  ; this_object_sprite/this_object_sprite_old
-    LDA sprite_height_lookup,Y  ; A=height entry
-    LSR A                       ; C=height entry bit 0
-    LDA sprite_width_lookup,Y   ; A=width entry
-    ROR A                       ; b7=height entry bit 0; C=width entry bit 0
-    AND #$80                    ; b7=height entry bit 0
-    ROR A                       ; b7=width entry bit 0, b6=height entry bit 0
+    LDA sprite_height_lookup,Y  ; C=?? A=h7 h6 h5 h4 h3 h2 h1 h0
+    LSR A                       ; C=h0 A=00 h7 h6 h5 h4 h3 h2 h1
+    LDA sprite_width_lookup,Y   ; C=h0 A=w7 w6 w5 w4 w3 w2 w1 w0
+    ROR A                       ; C=w0 A=h0 w7 w6 w5 w4 w3 w2 w1
+    AND #$80                    ; C=w0 A=h0 00 00 00 00 00 00 00
+    ROR A                       ; C=00 A=w0 h0 00 00 00 00 00 00
     EOR this_object_flipping_flags-2,X ; swap based on object flip
                                        ; flags? (So sprite can be
                                        ; flipped as part of its
                                        ; definition??)
     STA this_sprite_flipping_flags-2,X ; save for the sprite
-    ASL A                        ; C = Y flip flag?
+    ASL A                        ; C = X flip flag?
     STA this_sprite_partflip-2,X ; # X = 3, &66
                                  ; this_sprite_vertflip_old ; X = 2,
                                  ; &65 this_sprite_partflip
@@ -3947,7 +3947,10 @@ ENDIF
     RTS
 
 
-;;  returns A = background type for square
+; returns A = ?square_sprite = background sprite for square (i.e.,
+; 0-63)
+;
+; Stores orientation flags (%xx000000) in square_orientation.
 .determine_background
     LDX #$00
     STX new_object_data_pointer
@@ -3955,8 +3958,8 @@ ENDIF
     JSR calculate_background
     STA square_sprite
     AND #$C0
-    STA square_orientation
-    EOR square_sprite ; = calculate_background &3f
+    STA square_orientation      ; 
+    EOR square_sprite           ; = calculate_background &3f
     CMP #$09
     BCS no_background_object
 
@@ -5897,47 +5900,87 @@ ENDIF
 .L2395
     STA velocity_y
     RTS
+
+
 .setup_background_sprite_values
     JSR determine_background
+
+; (08 refers to square_sprite and 09 to square_orientation.)
+
 .setup_background_sprite_values_from_08_09
-    TAY ; Y = square_sprite
-    LDA background_palette_lookup,Y                ; what's the palette for this sprite?
-    BNE palette_not_zero ; palette_defined
-    LDA square_y                                      ; if 0, it depends on square_y / 16
-    SEC
-    SBC #$54
-    LSR A
-    LSR A
-    LSR A
-    LSR A
-    TAX
-    LDA wall_palette_zero_lookup,X ; wall_palette_lookup
+    TAY                             ; Y = square_sprite
+    LDA background_palette_lookup,Y ; what's the palette for this
+                                    ; sprite?
+    BNE palette_not_zero            ; palette_defined
+
+; objects with zero palette, coloured according to Y coordinate:
+;
+; 05 = brick wall, 3/4 full, \, filled in bottom left
+; 13 = brick wall, \, starting top middle, ending middle right, 3/4 full
+; 1e = brick wall, solid
+; 1f = brick wall, bottom half
+; 20 = horizontal brick door
+; 23 = brick \ wall, filled in bottom left
+; 24 = brick wall, \, starting top left, ending middle right
+; 25 = brick wall, \, starting middle left, ending bottom right
+; 2a = brick wall, \, very steep down
+; 3a = gargoyle, bottom left
+; 3b = brick wall, 3/4 filled bottom
+;
+; get their palette from wall_palette_lookup[(square_y-$54)/16]
+
+    LDA square_y                ; 
+    SEC                         ; 
+    SBC #$54                    ; square_y-$54
+    LSR A                       ; /2
+    LSR A                       ; /4
+    LSR A                       ; /8
+    LSR A                       ; /16
+    TAX                         ; 
+    LDA wall_palette_zero_lookup,X ; array lookup
+    
 .palette_not_zero
     CMP #$03
-    BCS palette_not_two                             ; if 1 or 2, it depends on square_y / &80
-    ADC #$B1
-    BIT square_y
-    BPL palette_not_six
-    ASL A
-    ADC #$90
+    BCS palette_not_two      ; taken if >=3
+
+; palette is 1 or 2 - function of square_y<0x80
+;
+; square_y<0x80?0xb1+palette:(0xb1+palette)<<1+0x91
+
+    ADC #$B1                    ; palette is $B2 (1) or $B3 (2)
+    BIT square_y                ;
+    BPL palette_not_six         ; taken if square_y<0x80
+
+; square_y>=0x80
+
+    ASL A                       ; palette is $64 (1) or $66 (2), and C
+                                ; set
+    ADC #$90                    ; palette is $f5 (1) or $f7 (2)
+    
 .palette_not_two
     CMP #$03
-    BNE palette_not_three                           ; if 3, it's a function of x, y and orientation
-    LDA square_orientation
-    ROL A
-    ROL A
-    ROL A
-    SBC square_y
-    ROR A
-    CLC
-    ADC square_x
-    AND #$03
-    TAX
-    LDA wall_palette_three_lookup,X
+    BNE palette_not_three
+
+; palette is 3 - function of x, y and orientation
+
+    LDA square_orientation      ; C=1 %ab000000
+    ROL A                       ; C=a %b0000001
+    ROL A                       ; C=b %0000001a
+    ROL A                       ; C=0 %000001ab
+    SBC square_y                ; um
+    ROR A                       ; ...
+    CLC                         ; ???
+    ADC square_x                ; ...
+    AND #$03                    ; it's only 2 bits though
+    TAX                         ; 
+    LDA wall_palette_three_lookup,X ; 
 .palette_not_three
     CMP #$04
     BNE palette_not_four
-    LDA square_y                                      ; if 4, it depends on square_y / 16
+
+; palette is 4 - it's wall_palette_four_lookup[square_y>>4&7]
+
+    LDA square_y                
     ROL A
     ROL A
     ROL A
@@ -5948,10 +5991,13 @@ ENDIF
 .palette_not_four
     CMP #$05
     BNE palette_not_five
-    LDA square_y                                      ; if 5, it's a function of y and orientation
-    ROR A
-    ROR A
-    EOR square_y
+
+; palette is 5 - a function of y and orientation
+
+    LDA square_y                
+    ROR A                       
+    ROR A                       
+    EOR square_y                
     ROR A
     BCC L23EF
     LDY #$19
@@ -5966,41 +6012,52 @@ ENDIF
     BVC palette_not_six
     ADC #$0A
 .palette_not_five
-    CMP #$06 ; if 6, it's a function of orientation
+    CMP #$06
     BNE palette_not_six
+
+; palette is 6 - a function of orientation
+
     LDA #$9C
     BIT square_orientation
     BVC palette_not_six
     LDA #$CF
 .palette_not_six
-    STA this_object_palette                           ; set the palette for this square
+    STA this_object_palette     ; set the palette for this square
     STA this_object_palette_old
     LDA square_orientation
-    STA this_object_flipping_flags                    ; set the orientation for this square
+    STA this_object_flipping_flags ; set the orientation for this square
     STA this_object_flipping_flags_old
-    LDA background_sprite_lookup,Y
-    AND #$7F
-    TAX
-    STA this_object_sprite                            ; set the sprite for this square
+
+; Translate background sprite to object sprite.
+
+    LDA background_sprite_lookup,Y 
+    AND #$7F                       ; mask off the extra flag
+    TAX                            
+    STA this_object_sprite         
     STA this_object_sprite_old
-    LDA background_y_offset_lookup,Y
-    AND #$F0
-    BIT square_orientation
-    BVC L2430
-    ADC sprite_height_lookup,X
-    ORA #$07
-    EOR #$FF
+
+; Adjust Y coordinate.
+
+    LDA background_y_offset_lookup,Y ; Y = background sprite
+    AND #$F0                         ; %11110000
+    BIT square_orientation           
+    BVC L2430                        ; taken if not flipped vertically
+    ADC sprite_height_lookup,X       ; adjust Y to account for flip
+    ORA #$07                         ; (the lower bits of
+                                     ; sprite_height_lookup are used
+                                     ; for something)
+    EOR #$FF                         ; negate???
 .L2430
-    STA this_object_y_low                             ; y position of start of square sprite
+    STA this_object_y_low       ; y position of start of square sprite
     STA this_object_y_low_old
     LDA #$00
     BIT square_orientation
-    BPL L243F
-    LDA #$F2
-    SBC sprite_width_lookup,X
+    BPL L243F                   ; taken if not flipped horizontally
+    LDA #$F2                    ; %11110010
+    SBC sprite_width_lookup,X   ; 
 .L243F
     STA this_object_x_low
-    STA this_object_x_low_old                         ; x position of start of square sprite
+    STA this_object_x_low_old   ; x position of start of square sprite
     LDA square_x
     STA this_object_x
     STA this_object_x_old
@@ -6008,6 +6065,7 @@ ENDIF
     STA this_object_y
     STA this_object_y_old
     RTS
+    
 ;;  A determines X on leaving
 .get_wall_start_80_83
     LDA #$04
@@ -13183,45 +13241,62 @@ ENDIF
     equb $00,$00,$22,$11,$97,$2F,$6F,$CF,$70,$87,$0F,$0E,$23,$80,$0C,$31,$00,$41,$00,$00,$0F,$1D,$CC,$40,$10,$06,$00,$17,$F0,$80,$10,$F0
 
 .sprite_width_lookup
-    equb $C0,$A0,$50,$90,$40,$50,$60,$40,$21,$20,$20,$21,$11,$11,$50,$30
-    equb $60,$51,$50,$50,$80,$50,$50,$B0,$B0,$80,$80,$50,$90,$70,$50,$30
-    equb $40,$20,$10,$F1,$F1,$71,$30,$F0,$F0,$F0,$F0,$F1,$F0,$30,$60,$30
-    equb $30,$F0,$F0,$F1,$F0,$F0,$F0,$F0,$F1,$F0,$F0,$F0,$F0,$F0,$F0,$F0
-    equb $F0,$30,$60,$F0,$F0,$70,$00,$F0,$F0,$F0,$F0,$30,$31,$41,$F0,$20
-    equb $40,$20,$50,$50,$30,$70,$C0,$40,$40,$20,$60,$60,$40,$F0,$70,$20
-    equb $70,$90,$C0,$30,$40,$50,$60,$40,$40,$30,$F0,$20,$30,$31,$70,$B1
-    equb $F0,$70,$51,$41,$50,$51,$30,$80,$30,$30,$50,$50,$40
+
+; %wwww000h
+;
+; 1+%wwww is the sprite width in pixels
+;
+; if h=1, the horizontal flip flag is inverted when plotting the
+; sprite
+
+;        0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
+    equb $C0,$A0,$50,$90,$40,$50,$60,$40,$21,$20,$20,$21,$11,$11,$50,$30 ; 0
+    equb $60,$51,$50,$50,$80,$50,$50,$B0,$B0,$80,$80,$50,$90,$70,$50,$30 ; 1
+    equb $40,$20,$10,$F1,$F1,$71,$30,$F0,$F0,$F0,$F0,$F1,$F0,$30,$60,$30 ; 2
+    equb $30,$F0,$F0,$F1,$F0,$F0,$F0,$F0,$F1,$F0,$F0,$F0,$F0,$F0,$F0,$F0 ; 3
+    equb $F0,$30,$60,$F0,$F0,$70,$00,$F0,$F0,$F0,$F0,$30,$31,$41,$F0,$20 ; 4
+    equb $40,$20,$50,$50,$30,$70,$C0,$40,$40,$20,$60,$60,$40,$F0,$70,$20 ; 5
+    equb $70,$90,$C0,$30,$40,$50,$60,$40,$40,$30,$F0,$20,$30,$31,$70,$B1 ; 6
+    equb $F0,$70,$51,$41,$50,$51,$30,$80,$30,$30,$50,$50,$40 ;             7
 
 .sprite_height_lookup
-; top 5 bits = height?
-    equb $40,$80,$98,$91,$A8,$A0,$A0,$A0,$09,$08,$10,$19,$19,$18,$58,$18
-    equb $60,$78,$81,$98,$78,$70,$98,$90,$28,$48,$78,$69,$20,$28,$38,$48
-    equb $38,$20,$08,$F8,$F8,$68,$F9,$F9,$B9,$79,$39,$F8,$78,$38,$38,$38
-    equb $F8,$38,$78,$F8,$F8,$78,$F8,$78,$F8,$F8,$C9,$78,$38,$F8,$89,$09
-    equb $49,$F8,$F8,$F9,$F9,$68,$00,$F8,$78,$38,$39,$F9,$F9,$28,$48,$18
-    equb $11,$19,$20,$29,$41,$F8,$70,$30,$20,$20,$19,$18,$28,$60,$48,$80
-    equb $58,$58,$39,$19,$68,$68,$68,$58,$68,$58,$38,$38,$28,$48,$48,$48
-    equb $48,$08,$30,$20,$28,$39,$70,$38,$30,$20,$20,$20,$20
+; %hhhhh00v
+;
+; 1+%hhhhh is the sprite height in pixels
+;
+; if v=1, the vertical flip flag is inverted when plotting the sprite
+
+;        0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
+    equb $40,$80,$98,$91,$A8,$A0,$A0,$A0,$09,$08,$10,$19,$19,$18,$58,$18 ; 0
+    equb $60,$78,$81,$98,$78,$70,$98,$90,$28,$48,$78,$69,$20,$28,$38,$48 ; 1
+    equb $38,$20,$08,$F8,$F8,$68,$F9,$F9,$B9,$79,$39,$F8,$78,$38,$38,$38 ; 2
+    equb $F8,$38,$78,$F8,$F8,$78,$F8,$78,$F8,$F8,$C9,$78,$38,$F8,$89,$09 ; 3
+    equb $49,$F8,$F8,$F9,$F9,$68,$00,$F8,$78,$38,$39,$F9,$F9,$28,$48,$18 ; 4
+    equb $11,$19,$20,$29,$41,$F8,$70,$30,$20,$20,$19,$18,$28,$60,$48,$80 ; 5
+    equb $58,$58,$39,$19,$68,$68,$68,$58,$68,$58,$38,$38,$28,$48,$48,$48 ; 6
+    equb $48,$08,$30,$20,$28,$39,$70,$38,$30,$20,$20,$20,$20 ;             7
 
 .sprite_offset_a_lookup
-    equb $36,$44,$C5,$04,$66,$06,$91,$41,$60,$43,$D0,$D4,$E4,$E4,$A4,$03
-    equb $97,$63,$03,$05,$77,$97,$65,$06,$06,$06,$06,$E6,$C6,$D6,$E6,$F6
-    equb $37,$D6,$65,$02,$03,$12,$C2,$03,$03,$03,$03,$02,$02,$04,$96,$C4
-    equb $04,$04,$43,$43,$00,$00,$05,$05,$01,$00,$00,$00,$00,$05,$05,$05
-    equb $05,$00,$C0,$00,$00,$44,$C0,$03,$03,$03,$07,$07,$53,$17,$02,$D4
-    equb $80,$D4,$07,$F6,$C6,$87,$04,$84,$47,$67,$C6,$C6,$96,$02,$44,$D4
-    equb $C3,$67,$36,$86,$01,$51,$31,$B1,$B1,$C4,$02,$67,$47,$15,$55,$35
-    equb $05,$00,$16,$37,$E6,$76,$04,$B6,$C4,$47,$84,$B6,$A4
+;        0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
+    equb $36,$44,$C5,$04,$66,$06,$91,$41,$60,$43,$D0,$D4,$E4,$E4,$A4,$03 ; 0
+    equb $97,$63,$03,$05,$77,$97,$65,$06,$06,$06,$06,$E6,$C6,$D6,$E6,$F6 ; 1
+    equb $37,$D6,$65,$02,$03,$12,$C2,$03,$03,$03,$03,$02,$02,$04,$96,$C4 ; 2
+    equb $04,$04,$43,$43,$00,$00,$05,$05,$01,$00,$00,$00,$00,$05,$05,$05 ; 3
+    equb $05,$00,$C0,$00,$00,$44,$C0,$03,$03,$03,$07,$07,$53,$17,$02,$D4 ; 4
+    equb $80,$D4,$07,$F6,$C6,$87,$04,$84,$47,$67,$C6,$C6,$96,$02,$44,$D4 ; 5
+    equb $C3,$67,$36,$86,$01,$51,$31,$B1,$B1,$C4,$02,$67,$47,$15,$55,$35 ; 6
+    equb $05,$00,$16,$37,$E6,$76,$04,$B6,$C4,$47,$84,$B6,$A4 ;             7
 
 .sprite_offset_b_lookup
-    equb $42,$02,$E9,$81,$98,$98,$E0,$E0,$7A,$00,$72,$E1,$5A,$3A,$81,$00
-    equb $E1,$0A,$02,$E9,$60,$68,$E9,$00,$00,$49,$49,$50,$68,$68,$58,$50
-    equb $D0,$D9,$A0,$00,$28,$01,$01,$09,$49,$89,$C9,$01,$81,$41,$81,$41
-    equb $80,$41,$80,$20,$00,$00,$00,$00,$89,$80,$80,$80,$31,$80,$09,$89
-    equb $49,$80,$80,$71,$01,$D0,$00,$80,$01,$41,$4A,$89,$A8,$E9,$F9,$C0
-    equb $72,$C0,$00,$20,$00,$E0,$00,$18,$11,$E1,$C0,$C8,$51,$B1,$78,$00
-    equb $2A,$00,$02,$02,$00,$00,$70,$00,$60,$E0,$4A,$0A,$B1,$99,$99,$99
-    equb $99,$72,$C9,$61,$59,$C1,$D0,$11,$88,$89,$90,$E8,$90
+;        0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f
+    equb $42,$02,$E9,$81,$98,$98,$E0,$E0,$7A,$00,$72,$E1,$5A,$3A,$81,$00 ; 0
+    equb $E1,$0A,$02,$E9,$60,$68,$E9,$00,$00,$49,$49,$50,$68,$68,$58,$50 ; 1
+    equb $D0,$D9,$A0,$00,$28,$01,$01,$09,$49,$89,$C9,$01,$81,$41,$81,$41 ; 2
+    equb $80,$41,$80,$20,$00,$00,$00,$00,$89,$80,$80,$80,$31,$80,$09,$89 ; 3
+    equb $49,$80,$80,$71,$01,$D0,$00,$80,$01,$41,$4A,$89,$A8,$E9,$F9,$C0 ; 4
+    equb $72,$C0,$00,$20,$00,$E0,$00,$18,$11,$E1,$C0,$C8,$51,$B1,$78,$00 ; 5
+    equb $2A,$00,$02,$02,$00,$00,$70,$00,$60,$E0,$4A,$0A,$B1,$99,$99,$99 ; 6
+    equb $99,$72,$C9,$61,$59,$C1,$D0,$11,$88,$89,$90,$E8,$90 ;             7
 
 if SRAM=0
 if P%>&6000:ERROR "encroaching on screen RAM":endif
