@@ -49,25 +49,6 @@ function hex2(x: number): string {
 /////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
 
-// function unpack(byte: number): Buffer {
-//     const pixels = Buffer.alloc(4);
-
-//     for (let bit = 0; bit < 2; ++bit) {
-//         for (let pixel = 0; pixel < 4; ++pixel) {
-//             pixels[pixel] <<= 1;
-//             if (byte & 0x80) {
-//                 pixels[pixel] |= 1;
-//             }
-//             byte <<= 1;
-//         }
-//     }
-
-//     return pixels;
-// }
-
-/////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////
-
 // 8-bit value as described in the do_the_plotting comments.
 const DEFAULT_PALETTE = 0x71;
 
@@ -77,27 +58,6 @@ const SQUARE_HEIGHT = 32;
 const SPRITES_WIDTH = 128;
 const SPRITES_HEIGHT = 81;
 const NUM_SPRITES = 0x7d;
-// const MAP_DATA_OFFSET = 0x4eec;//offset of map_data
-//const SPRITE_DATA_OFFSET = 0x52ec;//offset of sprite_data
-// const SPRITE_TABLES_OFFSET = SPRITE_DATA_OFFSET + ((SPRITES_WIDTH * SPRITES_HEIGHT) >> 2);
-// const SPRITE_WIDTHS_OFFSET = SPRITE_TABLES_OFFSET + 0 * NUM_SPRITES;
-// const SPRITE_HEIGHTS_OFFSET = SPRITE_TABLES_OFFSET + 1 * NUM_SPRITES;
-// const SPRITE_AS_OFFSET = SPRITE_TABLES_OFFSET + 2 * NUM_SPRITES;
-// const SPRITE_BS_OFFSET = SPRITE_TABLES_OFFSET + 3 * NUM_SPRITES;
-
-// const BACKGROUND_LOOKUP_OFFSET = 0x1050;//offset of background_lookup
-// const LOOKUP_FOR_UNMATCHED_HASH_OFFSET = 0x107c;//offset of lookup_for_unmatched_hash
-
-// const BACKGROUND_SPRITE_LOOKUP_OFFSET = 0x3ab;
-// const BACKGROUND_Y_OFFSET_LOOKUP_OFFSET = 0x3eb;
-// const BACKGROUND_PALETTE_LOOKUP_OFFSET = 0x42b;
-// const BACKGROUND_WALL_Y_START_BASE_LOOKUP_OFFSET = 0x46b;
-// const BACKGROUND_WALL_Y_START_LOOKUP_OFFSET = 0x4ab;
-// const BACKGROUND_OBJECTS_RANGE_OFFSET = 0x4d4;
-// const BACKGROUND_OBJECTS_DATA_OFFSET_OFFSET = 0x4dd;
-// const BACKGROUND_OBJECTS_TYPE_OFFSET_OFFSET = 0x4e6;
-// const BACKGROUND_OBJECTS_X_LOOKUP_OFFSET = 0x4ef;
-// const BACKGROUND_OBJECTS_HANDLER_LOOKUP_OFFSET = 0x5ee;
 
 let gExile: Buffer;//exile file is loaded starting from offset 0x100
 const gSpritePNGs: pngjs.PNG[] = [];
@@ -106,6 +66,7 @@ const gSpritePNGs: pngjs.PNG[] = [];
 const EXILEB_EXPORTS = {
     square_sprite: 0x08,
     square_orientation: 0x09,
+    background_processing_flag: 0x2d,
     this_object_x_low: 0x4f,
     this_object_y_low: 0x51,
     this_sprite_flipping_flags: 0x63,
@@ -131,6 +92,7 @@ const EXILEB_EXPORTS = {
     lookup_for_unmatched_hash: 0x117c,
     setup_background_sprite_values: 0x2398,
     palette_value_to_pixel_lookup: 0xb79,
+    calculate_background: 0x178d,
 };
 
 // (so in principle this could run off the contents of $.EXILEMC too.)
@@ -325,24 +287,6 @@ function printStr(png: pngjs.PNG, startX: number, startY: number, str: string) {
     }
 }
 
-// function putSprite(destPNG: pngjs.PNG, destX: number, destY: number, spritePNG: pngjs.PNG, flipX: boolean, flipY: boolean): void {
-//     for (let y = 0; y < spritePNG.height; ++y) {
-//         let srcY = y;
-//         if (flipY) {
-//             srcY = spritePNG.height - 1 - srcY;
-//         }
-
-//         for (let x = 0; x < spritePNG.width; ++x) {
-//             let srcX = x;
-//             if (flipX) {
-//                 srcX = spritePNG.width - 1 - srcX;
-//             }
-
-//             setPixel(destPNG, destX + x, destY + y, getPixel(spritePNG, srcX, srcY));
-//         }
-//     }
-// }
-
 function mustBeValidSprite(sprite: number): void {
     assert.ok(sprite >= 0 && sprite < 0x80, 'invalid sprite');
 }
@@ -492,6 +436,8 @@ function doSprites(): void {
         const width = getSpriteWidth(sprite);
         const height = getSpriteHeight(sprite);
 
+        pn('sprite ' + hex2(sprite) + ' - ' + getSpriteWidth(sprite) + ' x ' + getSpriteHeight(sprite));
+
         const spritePNG = new pngjs.PNG({ colorType: PNG_COLOUR_TYPE_RGBA, width, height });
         putSprite(spritePNG, 0, 0, sprite, false, false, DEFAULT_PALETTE);
         savePNG(spritePNG, './output/' + hex2(sprite) + '.png');
@@ -510,306 +456,6 @@ function mustBeBytes(...xs: number[]): void {
     for (const x of xs) {
         mustBeByte(x);
     }
-}
-
-/////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////
-
-class CpuState {
-    public a: number;
-    public c: boolean;
-
-    public constructor(a: number, c: boolean) {
-        this.a = a;
-        this.c = c;
-    }
-
-    public asla(): void {
-        this.c = (this.a & 0x80) !== 0;
-        this.a <<= 1;
-        this.a &= 0xff;
-    }
-
-    public adc(x: number): void {
-        mustBeByte(x);
-
-        const result = this.a + (this.c ? 1 : 0) + x;
-
-        this.a = result & 0xff;
-        this.c = result >= 256;
-    }
-
-    public and(x: number): void {
-        mustBeByte(x);
-
-        this.a &= 0xa8;
-    }
-
-    public eor(x: number): void {
-        mustBeByte(x);
-
-        this.a ^= 0xa8;
-    }
-
-    public lsra(): void {
-        this.a = this.lsr(this.a);
-    }
-
-    public lsr(x: number): number {
-        mustBeByte(x);
-
-        this.c = (x & 1) !== 0;
-
-        x >>= 1;
-        x &= 0xff;
-
-        return x;
-    }
-
-    public rora(): void {
-        this.a = this.ror(this.a);
-    }
-
-    public ror(x: number): number {
-        mustBeByte(x);
-
-        const c = (x & 1) !== 0;
-
-        x >>= 1;
-        x &= 0x7f;
-        if (this.c) {
-            x |= 0x80;
-        }
-
-        this.c = c;
-
-        return x;
-    }
-
-    public rola(): void {
-        this.a = this.rol(this.a);
-    }
-
-    public rol(x: number): number {
-        mustBeByte(x);
-
-
-        const c = (x & 0x80) !== 0;
-
-        x <<= 1;
-        x &= 0xfe;
-        if (this.c) {
-            x |= 1;
-        }
-
-        this.c = c;
-
-        return x;
-    }
-}
-
-function backgroundGrassFrond(): number {
-    return 0x62;//0x62 = grass frond
-}
-
-function backgroundEmpty(): number {
-    return backgroundIs114fLookupWithY(0);
-}
-
-function backgroundIs114fLookupWithY(y: number): number {
-    mustBeByte(y);
-
-    return gExile[X.background_lookup + y];
-}
-
-function notMapped2(squareX: number, squareY: number, f_xy: number): number {
-    mustBeBytes(squareX, squareY, f_xy);
-
-    if (squareY < 0x4e) {// cpx #$4e:bcc via_return_background_empty
-        return backgroundEmpty();
-    } else if (squareY === 0x4e) {//beq l17ec
-        // L17EC -> L1937
-        const s = new CpuState(squareX, false);
-        s.lsra();//lsr a
-        s.adc(squareX);//adc square_x
-        s.and(0x17);//and #$17
-        if (s.a !== 0) {
-            // L192a
-            s.adc(squareX);
-            s.rola();
-            s.rola();
-            s.rola();
-            s.and(0x02);
-            s.adc(0x19);
-            // tay...
-            return backgroundIs114fLookupWithY(s.a);
-        } else {
-            f_xy = s.ror(f_xy);
-            s.rora();
-            return s.a;
-        }
-    } else if (squareY === 0x4f) {//cpx#$4f:bne below_surface
-        // Surface
-        if (squareX === 0x40) {
-            // Force (0x40,0x4f) to be a grass frond
-            return backgroundGrassFrond();
-        } else {
-            // Everything else is wall.
-            return backgroundIs114fLookupWithY(1);
-        }
-    } else {
-        // below surface
-        return backgroundIs114fLookupWithY(1);//fudge.
-    }
-}
-
-function L17A8(squareX: number, squareY: number, f_xy: number): number {
-    mustBeBytes(squareX, squareY, f_xy);
-
-    if (squareY >= 0x3e && squareY <= 0x48) {
-        return notMapped2(squareX, squareY, f_xy);
-    }
-
-    if (squareY < 0x3e) {
-        squareY += 0x0a;
-    }
-
-    // L17B2
-    let isMappedData = false;
-    let f2_xy = squareY;
-    let f3_xy;
-    {
-        const s = new CpuState(f2_xy, false);
-        s.and(0xa8);//and #$a8
-        s.eor(0x6f);//eor #$6f
-        s.lsra();//lsr a
-        s.adc(squareX);//adc square_x
-        s.eor(0x60);//eor #$60
-        s.adc(0x28);//adc #$28
-        f3_xy = s.a;//sta f3_xy
-        s.and(0x38);//and #$38
-        s.eor(0xa4);//eor #$a4
-        s.adc(f2_xy);//adc f2_xy
-        f2_xy = s.a;//sta f2_xy
-        //tay...???
-        s.eor(0x2c);//eor #$2c
-        s.adc(f3_xy);//adc f3_xy
-        if (f2_xy >= 0x20) {
-            return notMapped2(squareX, squareY, f_xy);
-        }
-        if (s.a >= 0x20) {
-            if (s.a < 0x3d) {
-                return backgroundEmpty();
-            } else {
-                return notMapped2(squareX, squareY, f_xy);
-            }
-        }
-        isMappedData = true;
-        const y = s.a;
-        s.asla();//asl a
-        s.asla();//asl a
-        s.asla();//asl a
-        s.eor(f2_xy);//eor f2_xy
-        let mapAddress = s.a;//STA map_address
-        mapAddress |= (y & 3) << 8;//tya:and #$03:adc #HI(map_data):sta map_address_high
-        return gExile[X.map_data + mapAddress];
-    }
-}
-
-function calculateBackground(squareX: number, squareY: number): number {
-    mustBeBytes(squareX, squareY);
-
-    let f_xy = 0;
-    {
-        const s = new CpuState(squareY, false);//lda square_y
-        s.lsra();//lsr a
-        s.eor(squareX);//eor square_x
-        s.and(0xf8);//and #$f8
-        s.lsra();//lsr a
-        s.adc(squareX);//adc square_x
-        s.lsra();//lsr a
-        s.adc(squareY);//adc square_y
-        f_xy = s.a;
-    }
-
-    if (squareY < 0x79) {
-        //return new MapResult(MapResultType.TODO, 0);
-        return L17A8(squareX, squareY, f_xy);
-    } else if (squareY < 0xBF) {
-        return notMapped2(squareX, squareY, f_xy);
-    } else {
-        //return new MapResult(MapResultType.TODO, 0);
-        return L17A8(squareX, squareY - 0x46, f_xy);
-    }
-}
-
-function determineBackground(squareX: number, squareY: number): number {
-    let squareSprite = calculateBackground(squareX, squareY);
-
-    const backgroundObjectNumber = squareSprite & 0x3f;
-    let squareOrientation = squareSprite & 0xc0;
-
-    if (backgroundObjectNumber < 9) {
-
-        // For sprite types S, 0<=S<9, background_objects_range (R) indicates
-        // where in the x_lookup table to search.
-        //
-        // R[S-1] is the index to start at (this is the reason for
-        // background_objects_range_minus_one) and R [S] the index to stop at.
-        //
-        // If squareX is found in the table, get the other details from the
-        // other tables.
-        //
-        // Otherwise, fish it out of the 
-        //
-        // The futzing about it does with the contents of
-        // background_objects_x_lookup can mostly be ignored (I think??) - this
-        // is just it temporarily adding a sentinel value, to simplify the loop
-        // termination.
-
-        const beginIdx = gExile[X.background_objects_range - 1 + backgroundObjectNumber];
-        const endIdx = gExile[X.background_objects_range + backgroundObjectNumber];
-        assert.ok(endIdx >= beginIdx);
-
-        let foundIdx = -1;
-
-        for (let idx = beginIdx; idx !== endIdx; ++idx) {
-            if (gExile[X.background_objects_x_lookup + idx] === squareX) {
-                foundIdx = idx;
-                break;
-            }
-        }
-
-        let newObjectDataPointer = 0;
-        let newObjectTypePointer = 0;
-
-        if (foundIdx >= 0) {
-            // this is the bit after the loop at L173D. X = foundIdx; Y =
-            // backgroundObjectNumber
-
-            // adc background_objects_data_offset,y:sta new_object_data_pointer
-            newObjectDataPointer = foundIdx + gExile[X.background_objects_data_offset + backgroundObjectNumber];
-
-            // adc background_objects_type_offset,y:sta new_object_type_pointer
-            newObjectTypePointer = newObjectDataPointer + gExile[X.background_objects_type_offset + backgroundObjectNumber];
-
-            // lda background_objects_handler_lookupX
-            squareSprite = gExile[X.background_objects_handler_lookup + foundIdx];
-        } else {
-            // no_background_object_in_hash
-            squareSprite = gExile[X.lookup_for_unmatched_hash + backgroundObjectNumber];
-            squareSprite ^= squareOrientation;
-        }
-
-        // L1761
-        //
-        // Y=backgroundObjectNumber
-        squareOrientation = squareSprite & 0xc0;
-    }
-
-    squareSprite &= 0x3f;
-
-    return squareSprite;
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -850,15 +496,27 @@ interface IBackground2 {
     xLow: number;
     yLow: number;
     squareSprite: number;
+    calculateBackgroundSquareSprite: number;
 }
 
 function setupBackgroundSpriteValues6502(squareX: number, squareY: number): IBackground2 {
     mustBeBytes(squareX, squareY);
 
+    let calculateBackgroundSquareSprite;
+    {
+        const cpu = newExileCPU();
+
+        cpu.write8(X.square_x, squareX);
+        cpu.write8(X.square_y, squareY);
+        callRoutine(cpu, X.calculate_background);
+        calculateBackgroundSquareSprite = cpu.a & 0x3f;//cpu.read8(X.square_sprite);
+    }
+
     const cpu = newExileCPU();
 
     cpu.write8(X.square_x, squareX);
     cpu.write8(X.square_y, squareY);
+    //cpu.write8(X.background_processing_flag);
     callRoutine(cpu, X.setup_background_sprite_values);
 
     const result = {
@@ -869,21 +527,31 @@ function setupBackgroundSpriteValues6502(squareX: number, squareY: number): IBac
         palette: cpu.read8(X.this_object_palette),
         xLow: cpu.read8(X.this_object_x_low),// >> 3,
         yLow: cpu.read8(X.this_object_y_low),// >> 3,
+        calculateBackgroundSquareSprite,
     };
     return result;
+}
+
+function createPNG(width: number, height: number, r: number, g: number, b: number, a: number): pngjs.PNG {
+    const png = new pngjs.PNG({ colorType: PNG_COLOUR_TYPE_RGBA, width, height });
+
+    for (let i = 0; i < png.data.length; i += 4) {
+        png.data[i + 0] = r;
+        png.data[i + 1] = g;
+        png.data[i + 2] = b;
+        png.data[i + 3] = a;
+    }
+
+    return png;
 }
 
 /////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
 
 function doBackground() {
-    const miniMapPNG = new pngjs.PNG({ colorType: PNG_COLOUR_TYPE_RGBA, width: 256, height: 256 });
+    const miniMapPNG = createPNG(256, 256, 0, 0, 0, 255);//new pngjs.PNG({ colorType: PNG_COLOUR_TYPE_RGBA, width: 256, height: 256 });
 
-    const fullMapPNG = new pngjs.PNG({ colorType: PNG_COLOUR_TYPE_RGBA, width: 256 * SQUARE_WIDTH, height: 256 * SQUARE_HEIGHT });
-    fullMapPNG.data.fill(0);
-    for (let i = 3; i < fullMapPNG.data.length; i += 4) {
-        fullMapPNG.data[i] = 255;
-    }
+    const fullMapPNG = createPNG(256 * SQUARE_WIDTH, 256 * SQUARE_HEIGHT, 0, 0, 0, 255);
 
     const backgrounds: IBackground2[][] = [];
     let numFlipped = 0;
@@ -940,7 +608,7 @@ function doBackground() {
             const background = backgrounds[squareY][squareX];
 
             printStr(fullMapPNG, x + 1, y + 1, hex2(squareX) + hex2(squareY));
-            printStr(fullMapPNG, x + 1, y + 7, hex2(background.squareSprite) + hex2(background.thisObjectSprite));
+            printStr(fullMapPNG, x + 1, y + 7, hex2(background.calculateBackgroundSquareSprite));//hex2(background.squareSprite) + hex2(background.thisObjectSprite));
             printStr(fullMapPNG, x + 1, y + 14, hex2(background.objectFlippingFlags));
             // printStr(fullMapPNG, x, y + 6, hex2(background.squareSprite) + hex2(background.squareOrientation));
             // printStr(fullMapPNG, x, y + 12, hex2(gExile[X.background_sprite_lookup + background.squareSprite]));
