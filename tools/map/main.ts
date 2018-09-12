@@ -108,6 +108,10 @@ const EXILEB_EXPORTS = {
     square_orientation: 0x09,
     this_object_x_low: 0x4f,
     this_object_y_low: 0x51,
+    this_sprite_flipping_flags: 0x63,
+    this_object_sprite: 0x75,
+    this_object_flipping_flags: 0x71,
+    this_object_palette: 0x73,
     square_x: 0x95,
     square_y: 0x97,
     determine_background: 0x1715,
@@ -181,8 +185,8 @@ function getPixelValue(floatValue: number): number {
     }
 }
 
-function lerp(a: number, b: number, t: number): number {
-    return a + t * (b - a);
+function blend(a: number, b: number, t: number): number {
+    return (1 - t) * a + t * b;
 }
 
 function setPixel(png: pngjs.PNG, x: number, y: number, pixel: number[], alpha?: number) {
@@ -195,14 +199,129 @@ function setPixel(png: pngjs.PNG, x: number, y: number, pixel: number[], alpha?:
             alpha = 1;
         }
 
-        const r = lerp(oldPixel[0], pixel[0], alpha);
-        const g = lerp(oldPixel[1], pixel[1], alpha);
-        const b = lerp(oldPixel[2], pixel[2], alpha);
+        const r = blend(oldPixel[0], pixel[0], alpha);
+        const g = blend(oldPixel[1], pixel[1], alpha);
+        const b = blend(oldPixel[2], pixel[2], alpha);
 
         png.data[offset + 0] = getPixelValue(r);
         png.data[offset + 1] = getPixelValue(g);
         png.data[offset + 2] = getPixelValue(b);
         png.data[offset + 3] = 255;
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+
+const TELETEXT_CHARS = [
+    '......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......',
+    '......|...X..|..X.X.|...XX.|..XXX.|.XX...|..X...|...X..|....X.|..X...|...X..|......|......|......|......|......|...X..|...X..|..XXX.|.XXXXX|....X.|.XXXXX|...XX.|.XXXXX|..XXX.|..XXX.|......|......|....X.|......|..X...|..XXX.|..XXX.|...X..|.XXXX.|..XXX.|.XXXX.|.XXXXX|.XXXXX|..XXX.|.X...X|..XXX.|.....X|.X...X|.X....|.X...X|.X...X|..XXX.|.XXXX.|..XXX.|.XXXX.|..XXX.|.XXXXX|.X...X|.X...X|.X...X|.X...X|.X...X|.XXXXX|......|.X....|......|......|..X.X.|......|......|.X....|......|.....X|......|....X.|......|.X....|...X..|...X..|..X...|..XX..|......|......|......|......|......|......|......|...X..|......|......|......|......|......|......|..X...|..X.X.|.XX...|......|.XXXXX',
+    '......|...X..|..X.X.|..X..X|.X.X.X|.XX..X|.X.X..|...X..|...X..|...X..|.X.X.X|...X..|......|......|......|.....X|..X.X.|..XX..|.X...X|.....X|...XX.|.X....|..X...|.....X|.X...X|.X...X|......|......|...X..|......|...X..|.X...X|.X...X|..X.X.|.X...X|.X...X|.X...X|.X....|.X....|.X...X|.X...X|...X..|.....X|.X..X.|.X....|.XX.XX|.X...X|.X...X|.X...X|.X...X|.X...X|.X...X|...X..|.X...X|.X...X|.X...X|.X...X|.X...X|.....X|...X..|.X....|...X..|...X..|..X.X.|......|......|.X....|......|.....X|......|...X..|......|.X....|......|......|..X...|...X..|......|......|......|......|......|......|......|...X..|......|......|......|......|......|......|..X...|..X.X.|...X..|...X..|.XXXXX',
+    '......|...X..|..X.X.|..X...|.X.X..|....X.|.X.X..|...X..|..X...|....X.|..XXX.|...X..|......|......|......|....X.|.X...X|...X..|.....X|....X.|..X.X.|.XXXX.|.X....|....X.|.X...X|.X...X|...X..|...X..|..X...|.XXXXX|....X.|....X.|.X.XXX|.X...X|.X...X|.X....|.X...X|.X....|.X....|.X....|.X...X|...X..|.....X|.X.X..|.X....|.X.X.X|.XX..X|.X...X|.X...X|.X...X|.X...X|.X....|...X..|.X...X|.X...X|.X...X|..X.X.|..X.X.|....X.|..X...|.X....|....X.|..XXX.|.XXXXX|......|..XXX.|.XXXX.|..XXXX|..XXXX|..XXX.|...X..|..XXXX|.XXXX.|..XX..|...X..|..X..X|...X..|.XX.X.|.XXXX.|..XXX.|.XXXX.|..XXXX|..X.XX|..XXXX|..XXX.|.X...X|.X...X|.X...X|.X...X|.X...X|.XXXXX|..X...|..X.X.|.XX...|......|.XXXXX',
+    '......|...X..|......|.XXX..|..XXX.|...X..|..X...|......|..X...|....X.|...X..|.XXXXX|......|..XXX.|......|...X..|.X...X|...X..|...XX.|...XX.|.X..X.|.....X|.XXXX.|...X..|..XXX.|..XXXX|......|......|.X....|......|.....X|...X..|.X.X.X|.X...X|.XXXX.|.X....|.X...X|.XXXX.|.XXXX.|.X....|.XXXXX|...X..|.....X|.XX...|.X....|.X.X.X|.X.X.X|.X...X|.XXXX.|.X...X|.XXXX.|..XXX.|...X..|.X...X|..X.X.|.X.X.X|...X..|...X..|...X..|.XXXXX|.X....|.XXXXX|.X.X.X|..X.X.|.XXXXX|.....X|.X...X|.X....|.X...X|.X...X|..XXX.|.X...X|.X...X|...X..|...X..|..X.X.|...X..|.X.X.X|.X...X|.X...X|.X...X|.X...X|..XX..|.X....|...X..|.X...X|.X...X|.X...X|..X.X.|.X...X|....X.|..X...|..X.X.|...X..|.XXXXX|.XXXXX',
+    '......|...X..|......|..X...|...X.X|..X...|.X.X.X|......|..X...|....X.|..XXX.|...X..|...X..|......|......|..X...|.X...X|...X..|..X...|.....X|.XXXXX|.....X|.X...X|..X...|.X...X|.....X|......|...X..|..X...|.XXXXX|....X.|...X..|.X.XXX|.XXXXX|.X...X|.X....|.X...X|.X....|.X....|.X..XX|.X...X|...X..|.....X|.X.X..|.X....|.X...X|.X..XX|.X...X|.X....|.X.X.X|.X.X..|.....X|...X..|.X...X|..X.X.|.X.X.X|..X.X.|...X..|..X...|..X...|.X.XX.|....X.|...X..|.XXXXX|......|..XXXX|.X...X|.X....|.X...X|.XXXXX|...X..|.X...X|.X...X|...X..|...X..|..XX..|...X..|.X.X.X|.X...X|.X...X|.X...X|.X...X|..X...|..XXX.|...X..|.X...X|..X.X.|.X.X.X|...X..|.X...X|...X..|..X..X|..X.X.|.XX..X|......|.XXXXX',
+    '......|......|......|..X...|.X.X.X|.X..XX|.X..X.|......|...X..|...X..|.X.X.X|...X..|...X..|......|......|.X....|..X.X.|...X..|.X....|.X...X|....X.|.X...X|.X...X|..X...|.X...X|....X.|...X..|...X..|...X..|......|...X..|......|.X....|.X...X|.X...X|.X...X|.X...X|.X....|.X....|.X...X|.X...X|...X..|.X...X|.X..X.|.X....|.X...X|.X...X|.X...X|.X....|.X..X.|.X..X.|.X...X|...X..|.X...X|...X..|.X.X.X|.X...X|...X..|.X....|...X..|.....X|...X..|...X..|..X.X.|......|.X...X|.X...X|.X....|.X...X|.X....|...X..|.X...X|.X...X|...X..|...X..|..X.X.|...X..|.X.X.X|.X...X|.X...X|.X...X|.X...X|..X...|.....X|...X..|.X...X|..X.X.|.X.X.X|..X.X.|.X...X|..X...|....XX|..X.X.|....XX|...X..|.XXXXX',
+    '......|...X..|......|.XXXXX|..XXX.|....XX|..XX.X|......|....X.|..X...|...X..|......|..X...|......|...X..|......|...X..|..XXX.|.XXXXX|..XXX.|....X.|..XXX.|..XXX.|..X...|..XXX.|..XX..|......|..X...|....X.|......|..X...|...X..|..XXXX|.X...X|.XXXX.|..XXX.|.XXXX.|.XXXXX|.X....|..XXXX|.X...X|..XXX.|..XXX.|.X...X|.XXXXX|.X...X|.X...X|..XXX.|.X....|..XX.X|.X...X|..XXX.|...X..|..XXX.|...X..|..X.X.|.X...X|...X..|.XXXXX|......|....X.|......|......|..X.X.|......|..XXXX|.XXXX.|..XXXX|..XXXX|..XXX.|...X..|..XXXX|.X...X|..XXX.|...X..|..X..X|..XXX.|.X.X.X|.X...X|..XXX.|.XXXX.|..XXXX|..X...|.XXXX.|....X.|..XXXX|...X..|..X.X.|.X...X|..XXXX|.XXXXX|...X.X|..X.X.|...X.X|......|.XXXXX',
+    '......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|...X..|......|......|......|......|......|......|......|......|......|......|.....X|......|......|..X...|......|......|......|......|......|.X....|.....X|......|......|......|......|......|......|......|.....X|......|...XXX|......|...XXX|......|......',
+    '......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|...XXX|......|......|......|......|......|......|......|......|......|......|..XXX.|......|......|......|......|......|......|......|......|.X....|.....X|......|......|......|......|......|......|......|..XXX.|......|.....X|......|.....X|......|......',
+];
+
+const MINI_OTHER_CHARS = [
+    '...',
+    '...',
+    '...',
+    '...',
+    '...',
+];
+
+const MINI_DIGIT_CHARS = [
+    'XXX|XX.|XXX|XXX|X.X|XXX|XXX|XXX|XXX|XXX',
+    'X.X|.X.|..X|..X|X.X|X..|X..|..X|X.X|X.X',
+    'X.X|.X.|XXX|XXX|XXX|XXX|XXX|..X|XXX|XXX',
+    'X.X|.X.|X..|..X|..X|..X|X.X|..X|X.X|..X',
+    'XXX|XXX|XXX|XXX|..X|XXX|XXX|..X|XXX|XXX',
+];
+
+const MINI_ALPHA_CHARS = [
+    'XXX|XX.|XXX|XX.|XXX|XXX|XXX|X.X|XXX|XXX|X.X|X..|X.X|X.X|XXX|XXX|XXX|XX.|XXX|XXX|X.X|X.X|X.X|X.X|X.X|XXX',
+    'X.X|X.X|X..|X.X|X..|X..|X..|X.X|.X.|.X.|X.X|X..|XXX|XXX|X.X|X.X|X.X|X.X|X..|.X.|X.X|X.X|X.X|X.X|X.X|..X',
+    'XXX|XX.|X..|X.X|XXX|XXX|X.X|XXX|.X.|.X.|XX.|X..|XXX|XXX|X.X|XXX|X.X|XX.|XXX|.X.|X.X|X.X|XXX|.X.|XXX|.X.',
+    'X.X|X.X|X..|X.X|X..|X..|X.X|X.X|.X.|.X.|X.X|X..|X.X|XXX|X.X|X..|XXX|X.X|..X|.X.|X.X|.X.|XXX|X.X|.X.|X..',
+    'X.X|XX.|XXX|XX.|XXX|X..|XXX|X.X|XXX|XX.|X.X|XXX|X.X|X.X|XXX|X..|XX.|X.X|XXX|.X.|XXX|.X.|X.X|X.X|.X.|XXX',
+];
+
+function printStr(png: pngjs.PNG, startX: number, startY: number, str: string) {
+    let chX = startX;
+
+    const WHITE = [1, 1, 1];
+    const BLACK = [0, 0, 0];
+
+    for (let chIdx = 0; chIdx < str.length; ++chIdx) {
+        let c = str.charCodeAt(chIdx);
+
+        let chars: string[];
+        let index: number;
+
+        if (str[chIdx] >= 'A' && str[chIdx] <= 'Z') {
+            chars = MINI_ALPHA_CHARS;
+            index = (str.charCodeAt(chIdx) - 'A'.charCodeAt(0)) * 4;
+        } else if (str[chIdx] >= 'a' && str[chIdx] <= 'z') {
+            chars = MINI_ALPHA_CHARS;
+            index = (str.charCodeAt(chIdx) - 'a'.charCodeAt(0)) * 4;
+        } else if (str[chIdx] >= '0' && str[chIdx] <= '9') {
+            chars = MINI_DIGIT_CHARS;
+            index = (str.charCodeAt(chIdx) - '0'.charCodeAt(0)) * 4;
+        } else {
+            chars = MINI_OTHER_CHARS;
+            index = 0;
+        }
+
+        for (let y = 0; y < 5; ++y) {
+            for (let x = 0; x < (chIdx === str.length - 1 ? 3 : 4); ++x) {
+                const py = startY + y;
+                const px = startX + chIdx * 4 + x;
+
+                let pixel: number[];
+
+                if (x < 3 && chars[y][index + x] === 'X') {
+                    pixel = WHITE;
+                } else {
+                    pixel = BLACK;
+                }
+
+                setPixel(png, px, py, pixel);//, 0.5);
+            }
+        }
+
+        // for (let chIdx = 0; chIdx < str.length; ++chIdx) {
+        //     let c = str.charCodeAt(chIdx);
+        //     if (c < 32 || c >= 126) {
+        //         c = 32;
+        //     }
+
+        //     const i = (c - 32) * 7;
+        //     for (let y = 0; y < 10; ++y) {
+        //         for (let x = 0; x < 6; ++x) {
+        //             const py = startY + y;
+        //             const px = startX + chIdx * 6 + x;
+
+        //             let pixel: number[];
+
+        //             if (TELETEXT_CHARS[y][i + x] === '.') {
+        //                 pixel = getPixel(png, px, py);
+        //                 pixel[0] *= 0.5;
+        //                 pixel[1] *= 0.5;
+        //                 pixel[2] *= 0.5;
+        //             } else {
+        //                 pixel = WHITE;
+        //             }
+
+        //             setPixel(png, px, py, pixel);
+        //         }
+        //     }
+
+        //     chX += 6;
+        // }
     }
 }
 
@@ -271,6 +390,14 @@ function putSprite(
 
     const a = gExile[X.sprite_offset_a_lookup + sprite];
     const b = gExile[X.sprite_offset_b_lookup + sprite];
+
+    if ((gExile[X.sprite_width_lookup + sprite] & 1) !== 0) {
+        flipX = !flipX;
+    }
+
+    if ((gExile[X.sprite_height_lookup + sprite] & 1) !== 0) {
+        flipY = !flipY;
+    }
 
     const srcY = b >> 3 | (b & 7) << 5;
 
@@ -685,6 +812,9 @@ function determineBackground(squareX: number, squareY: number): number {
     return squareSprite;
 }
 
+/////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+
 interface IBackground {
     squareSprite: number;
     squareOrientation: number;
@@ -709,9 +839,17 @@ function determineBackground6502(squareX: number, squareY: number): IBackground 
     return result;
 }
 
-interface IBackground2 extends IBackground {
+/////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////
+
+interface IBackground2 {
+    thisObjectSprite: number;
+    objectFlippingFlags: number;
+    //spriteFlippingFlags: number;
+    palette: number;
     xLow: number;
     yLow: number;
+    squareSprite: number;
 }
 
 function setupBackgroundSpriteValues6502(squareX: number, squareY: number): IBackground2 {
@@ -725,9 +863,12 @@ function setupBackgroundSpriteValues6502(squareX: number, squareY: number): IBac
 
     const result = {
         squareSprite: cpu.read8(X.square_sprite),
-        squareOrientation: cpu.read8(X.square_orientation),
-        xLow: cpu.read8(X.this_object_x_low) >> 3,
-        yLow: cpu.read8(X.this_object_y_low) >> 3,
+        thisObjectSprite: cpu.read8(X.this_object_sprite),
+        objectFlippingFlags: cpu.read8(X.this_object_flipping_flags),
+        //spriteFlippingFlags: cpu.read8(X.this_sprite_flipping_flags),
+        palette: cpu.read8(X.this_object_palette),
+        xLow: cpu.read8(X.this_object_x_low),// >> 3,
+        yLow: cpu.read8(X.this_object_y_low),// >> 3,
     };
     return result;
 }
@@ -735,232 +876,50 @@ function setupBackgroundSpriteValues6502(squareX: number, squareY: number): IBac
 /////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////
 
-const TELETEXT_CHARS = [
-    '......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......',
-    '......|...X..|..X.X.|...XX.|..XXX.|.XX...|..X...|...X..|....X.|..X...|...X..|......|......|......|......|......|...X..|...X..|..XXX.|.XXXXX|....X.|.XXXXX|...XX.|.XXXXX|..XXX.|..XXX.|......|......|....X.|......|..X...|..XXX.|..XXX.|...X..|.XXXX.|..XXX.|.XXXX.|.XXXXX|.XXXXX|..XXX.|.X...X|..XXX.|.....X|.X...X|.X....|.X...X|.X...X|..XXX.|.XXXX.|..XXX.|.XXXX.|..XXX.|.XXXXX|.X...X|.X...X|.X...X|.X...X|.X...X|.XXXXX|......|.X....|......|......|..X.X.|......|......|.X....|......|.....X|......|....X.|......|.X....|...X..|...X..|..X...|..XX..|......|......|......|......|......|......|......|...X..|......|......|......|......|......|......|..X...|..X.X.|.XX...|......|.XXXXX',
-    '......|...X..|..X.X.|..X..X|.X.X.X|.XX..X|.X.X..|...X..|...X..|...X..|.X.X.X|...X..|......|......|......|.....X|..X.X.|..XX..|.X...X|.....X|...XX.|.X....|..X...|.....X|.X...X|.X...X|......|......|...X..|......|...X..|.X...X|.X...X|..X.X.|.X...X|.X...X|.X...X|.X....|.X....|.X...X|.X...X|...X..|.....X|.X..X.|.X....|.XX.XX|.X...X|.X...X|.X...X|.X...X|.X...X|.X...X|...X..|.X...X|.X...X|.X...X|.X...X|.X...X|.....X|...X..|.X....|...X..|...X..|..X.X.|......|......|.X....|......|.....X|......|...X..|......|.X....|......|......|..X...|...X..|......|......|......|......|......|......|......|...X..|......|......|......|......|......|......|..X...|..X.X.|...X..|...X..|.XXXXX',
-    '......|...X..|..X.X.|..X...|.X.X..|....X.|.X.X..|...X..|..X...|....X.|..XXX.|...X..|......|......|......|....X.|.X...X|...X..|.....X|....X.|..X.X.|.XXXX.|.X....|....X.|.X...X|.X...X|...X..|...X..|..X...|.XXXXX|....X.|....X.|.X.XXX|.X...X|.X...X|.X....|.X...X|.X....|.X....|.X....|.X...X|...X..|.....X|.X.X..|.X....|.X.X.X|.XX..X|.X...X|.X...X|.X...X|.X...X|.X....|...X..|.X...X|.X...X|.X...X|..X.X.|..X.X.|....X.|..X...|.X....|....X.|..XXX.|.XXXXX|......|..XXX.|.XXXX.|..XXXX|..XXXX|..XXX.|...X..|..XXXX|.XXXX.|..XX..|...X..|..X..X|...X..|.XX.X.|.XXXX.|..XXX.|.XXXX.|..XXXX|..X.XX|..XXXX|..XXX.|.X...X|.X...X|.X...X|.X...X|.X...X|.XXXXX|..X...|..X.X.|.XX...|......|.XXXXX',
-    '......|...X..|......|.XXX..|..XXX.|...X..|..X...|......|..X...|....X.|...X..|.XXXXX|......|..XXX.|......|...X..|.X...X|...X..|...XX.|...XX.|.X..X.|.....X|.XXXX.|...X..|..XXX.|..XXXX|......|......|.X....|......|.....X|...X..|.X.X.X|.X...X|.XXXX.|.X....|.X...X|.XXXX.|.XXXX.|.X....|.XXXXX|...X..|.....X|.XX...|.X....|.X.X.X|.X.X.X|.X...X|.XXXX.|.X...X|.XXXX.|..XXX.|...X..|.X...X|..X.X.|.X.X.X|...X..|...X..|...X..|.XXXXX|.X....|.XXXXX|.X.X.X|..X.X.|.XXXXX|.....X|.X...X|.X....|.X...X|.X...X|..XXX.|.X...X|.X...X|...X..|...X..|..X.X.|...X..|.X.X.X|.X...X|.X...X|.X...X|.X...X|..XX..|.X....|...X..|.X...X|.X...X|.X...X|..X.X.|.X...X|....X.|..X...|..X.X.|...X..|.XXXXX|.XXXXX',
-    '......|...X..|......|..X...|...X.X|..X...|.X.X.X|......|..X...|....X.|..XXX.|...X..|...X..|......|......|..X...|.X...X|...X..|..X...|.....X|.XXXXX|.....X|.X...X|..X...|.X...X|.....X|......|...X..|..X...|.XXXXX|....X.|...X..|.X.XXX|.XXXXX|.X...X|.X....|.X...X|.X....|.X....|.X..XX|.X...X|...X..|.....X|.X.X..|.X....|.X...X|.X..XX|.X...X|.X....|.X.X.X|.X.X..|.....X|...X..|.X...X|..X.X.|.X.X.X|..X.X.|...X..|..X...|..X...|.X.XX.|....X.|...X..|.XXXXX|......|..XXXX|.X...X|.X....|.X...X|.XXXXX|...X..|.X...X|.X...X|...X..|...X..|..XX..|...X..|.X.X.X|.X...X|.X...X|.X...X|.X...X|..X...|..XXX.|...X..|.X...X|..X.X.|.X.X.X|...X..|.X...X|...X..|..X..X|..X.X.|.XX..X|......|.XXXXX',
-    '......|......|......|..X...|.X.X.X|.X..XX|.X..X.|......|...X..|...X..|.X.X.X|...X..|...X..|......|......|.X....|..X.X.|...X..|.X....|.X...X|....X.|.X...X|.X...X|..X...|.X...X|....X.|...X..|...X..|...X..|......|...X..|......|.X....|.X...X|.X...X|.X...X|.X...X|.X....|.X....|.X...X|.X...X|...X..|.X...X|.X..X.|.X....|.X...X|.X...X|.X...X|.X....|.X..X.|.X..X.|.X...X|...X..|.X...X|...X..|.X.X.X|.X...X|...X..|.X....|...X..|.....X|...X..|...X..|..X.X.|......|.X...X|.X...X|.X....|.X...X|.X....|...X..|.X...X|.X...X|...X..|...X..|..X.X.|...X..|.X.X.X|.X...X|.X...X|.X...X|.X...X|..X...|.....X|...X..|.X...X|..X.X.|.X.X.X|..X.X.|.X...X|..X...|....XX|..X.X.|....XX|...X..|.XXXXX',
-    '......|...X..|......|.XXXXX|..XXX.|....XX|..XX.X|......|....X.|..X...|...X..|......|..X...|......|...X..|......|...X..|..XXX.|.XXXXX|..XXX.|....X.|..XXX.|..XXX.|..X...|..XXX.|..XX..|......|..X...|....X.|......|..X...|...X..|..XXXX|.X...X|.XXXX.|..XXX.|.XXXX.|.XXXXX|.X....|..XXXX|.X...X|..XXX.|..XXX.|.X...X|.XXXXX|.X...X|.X...X|..XXX.|.X....|..XX.X|.X...X|..XXX.|...X..|..XXX.|...X..|..X.X.|.X...X|...X..|.XXXXX|......|....X.|......|......|..X.X.|......|..XXXX|.XXXX.|..XXXX|..XXXX|..XXX.|...X..|..XXXX|.X...X|..XXX.|...X..|..X..X|..XXX.|.X.X.X|.X...X|..XXX.|.XXXX.|..XXXX|..X...|.XXXX.|....X.|..XXXX|...X..|..X.X.|.X...X|..XXXX|.XXXXX|...X.X|..X.X.|...X.X|......|.XXXXX',
-    '......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|...X..|......|......|......|......|......|......|......|......|......|......|.....X|......|......|..X...|......|......|......|......|......|.X....|.....X|......|......|......|......|......|......|......|.....X|......|...XXX|......|...XXX|......|......',
-    '......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|......|...XXX|......|......|......|......|......|......|......|......|......|......|..XXX.|......|......|......|......|......|......|......|......|.X....|.....X|......|......|......|......|......|......|......|..XXX.|......|.....X|......|.....X|......|......',
-];
-
-const MINI_OTHER_CHARS = [
-    '...',
-    '...',
-    '...',
-    '...',
-    '...',
-];
-
-const MINI_DIGIT_CHARS = [
-    'XXX|XX.|XXX|XXX|X.X|XXX|XXX|XXX|XXX|XXX',
-    'X.X|.X.|..X|..X|X.X|X..|X..|..X|X.X|X.X',
-    'X.X|.X.|XXX|XXX|XXX|XXX|XXX|..X|XXX|XXX',
-    'X.X|.X.|X..|..X|..X|..X|X.X|..X|X.X|..X',
-    'XXX|XXX|XXX|XXX|..X|XXX|XXX|..X|XXX|XXX',
-];
-
-const MINI_ALPHA_CHARS = [
-    'XXX|XX.|XXX|XX.|XXX|XXX|XXX|X.X|XXX|XXX|X.X|X..|X.X|X.X|XXX|XXX|XXX|XX.|XXX|XXX|X.X|X.X|X.X|X.X|X.X|XXX',
-    'X.X|X.X|X..|X.X|X..|X..|X..|X.X|.X.|.X.|X.X|X..|XXX|XXX|X.X|X.X|X.X|X.X|X..|.X.|X.X|X.X|X.X|X.X|X.X|..X',
-    'XXX|XX.|X..|X.X|XXX|XXX|X.X|XXX|.X.|.X.|XX.|X..|XXX|XXX|X.X|XXX|X.X|XX.|XXX|.X.|X.X|X.X|XXX|.X.|XXX|.X.',
-    'X.X|X.X|X..|X.X|X..|X..|X.X|X.X|.X.|.X.|X.X|X..|X.X|XXX|X.X|X..|XXX|X.X|..X|.X.|X.X|.X.|XXX|X.X|.X.|X..',
-    'X.X|XX.|XXX|XX.|XXX|X..|XXX|X.X|XXX|XX.|X.X|XXX|X.X|X.X|XXX|X..|XX.|X.X|XXX|.X.|XXX|.X.|X.X|X.X|.X.|XXX',
-];
-
-function printStr(png: pngjs.PNG, startX: number, startY: number, str: string) {
-    let chX = startX;
-
-    const WHITE = [1, 1, 1];
-    const BLACK = [0, 0, 0];
-
-    for (let chIdx = 0; chIdx < str.length; ++chIdx) {
-        let c = str.charCodeAt(chIdx);
-
-        let chars: string[];
-        let index: number;
-
-        if (str[chIdx] >= 'A' && str[chIdx] <= 'Z') {
-            chars = MINI_ALPHA_CHARS;
-            index = (str.charCodeAt(chIdx) - 'A'.charCodeAt(0)) * 4;
-        } else if (str[chIdx] >= 'a' && str[chIdx] <= 'z') {
-            chars = MINI_ALPHA_CHARS;
-            index = (str.charCodeAt(chIdx) - 'a'.charCodeAt(0)) * 4;
-        } else if (str[chIdx] >= '0' && str[chIdx] <= '9') {
-            chars = MINI_DIGIT_CHARS;
-            index = (str.charCodeAt(chIdx) - '0'.charCodeAt(0)) * 4;
-        } else {
-            chars = MINI_OTHER_CHARS;
-            index = 0;
-        }
-
-        for (let y = 0; y < 5; ++y) {
-            for (let x = 0; x < 4; ++x) {
-                const py = startY + y;
-                const px = startX + chIdx * 4 + x;
-
-                let pixel: number[];
-
-                if (x < 3 && chars[y][index + x] === 'X') {
-                    pixel = WHITE;
-                } else {
-                    pixel = BLACK;
-                }
-
-                setPixel(png, px, py, pixel, 0.5);
-            }
-        }
-
-        // for (let chIdx = 0; chIdx < str.length; ++chIdx) {
-        //     let c = str.charCodeAt(chIdx);
-        //     if (c < 32 || c >= 126) {
-        //         c = 32;
-        //     }
-
-        //     const i = (c - 32) * 7;
-        //     for (let y = 0; y < 10; ++y) {
-        //         for (let x = 0; x < 6; ++x) {
-        //             const py = startY + y;
-        //             const px = startX + chIdx * 6 + x;
-
-        //             let pixel: number[];
-
-        //             if (TELETEXT_CHARS[y][i + x] === '.') {
-        //                 pixel = getPixel(png, px, py);
-        //                 pixel[0] *= 0.5;
-        //                 pixel[1] *= 0.5;
-        //                 pixel[2] *= 0.5;
-        //             } else {
-        //                 pixel = WHITE;
-        //             }
-
-        //             setPixel(png, px, py, pixel);
-        //         }
-        //     }
-
-        //     chX += 6;
-        // }
-    }
-}
-
 function doBackground() {
     const miniMapPNG = new pngjs.PNG({ colorType: PNG_COLOUR_TYPE_RGBA, width: 256, height: 256 });
-    
+
     const fullMapPNG = new pngjs.PNG({ colorType: PNG_COLOUR_TYPE_RGBA, width: 256 * SQUARE_WIDTH, height: 256 * SQUARE_HEIGHT });
     fullMapPNG.data.fill(0);
     for (let i = 3; i < fullMapPNG.data.length; i += 4) {
         fullMapPNG.data[i] = 255;
     }
 
-    const backgrounds: IBackground[][] = [];
+    const backgrounds: IBackground2[][] = [];
     let numFlipped = 0;
-
 
     for (let squareY = 0; squareY < 256; ++squareY) {
         p('squareY: ' + hex2(squareY) + '\r');
         if (process.stderr.isTTY !== true) {
             pn('');
         }
-        const backgroundRow: IBackground[] = [];
+        const backgroundRow: IBackground2[] = [];
         backgrounds.push(backgroundRow);
         for (let squareX = 0; squareX < 256; ++squareX) {
-            const background = determineBackground6502(squareX, squareY);
+            const background = setupBackgroundSpriteValues6502(squareX, squareY);
             backgroundRow.push(background);
 
-            //pn('(' + squareX + ',' + squareY + '): ' + MapResultType[r.type]);
+            let spriteX = squareX * SQUARE_WIDTH + (background.xLow >> 4);
+            let spriteY = squareY * SQUARE_HEIGHT + (background.yLow >> 3);
 
-            // let pixel;
-            // switch (r.type) {
-            //     case MapResultType.Empty:
-            //         pixel = [0, 0, 0];
-            //         break;
+            const flippingFlags = background.objectFlippingFlags;// ^ background.spriteFlippingFlags;
 
-            //     case MapResultType.Frond:
-            //         pixel = [0, 1, 0];
-            //         break;
+            let flipX = (flippingFlags & 0x80) !== 0;
+            let flipY = (flippingFlags & 0x40) !== 0;
 
-            //     case MapResultType.Lookup114F:
-            //         pixel = [1, 0, 0];
-            //         break;
-
-            //     case MapResultType.L1937:
-            //         pixel = [0, 0, 1];
-            //         break;
-
-            //     case MapResultType.TODO:
-            //         pixel = [0, 1, 1];
-            //         break;
-
-            //     case MapResultType.BelowSurface:
-            //         pixel = [0.5, 0.25, 0];
-            //         break;
-
-            //     case MapResultType.Mapped:
-            //         pixel = [0, 0.5, 0];
-            //         break;
-
-            //     default:
-            //         pixel = [1, 0, 1];
-            //         break;
+            // if ((gExile[X.background_sprite_lookup + background.squareSprite] & 0x80) !== 0) {
+            //     flipY = !flipY;
             // }
 
-            // setPixel(miniMapPNG, squareX, squareY, pixel);
+            putSprite(fullMapPNG, spriteX, spriteY, background.thisObjectSprite, flipX, flipY, background.palette);
+        }
+    }
 
-            // const sprite = backgroundSprite & 0x3f;
-            // const orientation = backgroundSprite & 0xc0;
-
-            const actualSprite = gExile[X.background_sprite_lookup + background.squareSprite] & 0x7f;
-
-            // if ((actualSprite & 0x80) !== 0) {
-            //     ++numFlipped;
-            // }
-
-            let spriteX = squareX * SQUARE_WIDTH;
-            let spriteY = squareY * SQUARE_HEIGHT;
-            let flipX = false;
-            let flipY = false;
-
-
-            // switch (background.squareOrientation & 0xc0) {
-            //     case 0x00:
-            //         // 00 = bottom left, unflipped
-            //         flipX = true;
-            //         spriteY += 32 - getSpriteHeight(actualSprite);
-            //         break;
-
-            //     case 0x40:
-            //         // 40 = top left, vertical flip
-            //         flipY = true;
-            //         break;
-
-            //     case 0x80:
-            //         // 80 = bottom right, horizontal flip
-            //         spriteX += 32 - getSpriteWidth(actualSprite);
-            //         spriteY += 32 - getSpriteHeight(actualSprite);
-            //         break;
-
-            //     case 0xc0:
-            //         // c0 = top right, vertical & horizontal flip
-            //         spriteX += 32 - getSpriteWidth(actualSprite);
-            //         flipY = true;
-            //         break;
-            // }
-
-            putSprite(fullMapPNG, spriteX, spriteY, actualSprite, flipX, flipY, DEFAULT_PALETTE);
-
-            // const spritePNG = gSpritePNGs[actualSprite & 0x7f];
-            // spritePNG.bitblt(fullMapPNG, 0, 0, spritePNG.width, spritePNG.height, squareX * 32, squareY * 32);
-
-            //const sprite = gExile[X.background_sprite_lookup + backgroundSprite];
-
-            // const fullX = squareX * 32;
-            // const fullY = squareY * 32;
-            // const sprite = gSpritePNGs[backgroundSprite];
-            // sprite.bitblt(fullMapPNG, 0, 0, sprite.width, sprite.height, fullX, fullY);
+    for (let y = 0; y < 256 * SQUARE_HEIGHT; ++y) {
+        for (let x = 0; x < 256 * SQUARE_WIDTH; ++x) {
+            if (x % SQUARE_WIDTH === 0 || y % SQUARE_HEIGHT === 0) {
+                setPixel(fullMapPNG, x, y, [.5, .5, .5]);
+            }
         }
     }
 
@@ -980,9 +939,11 @@ function doBackground() {
             const y = squareY * SQUARE_HEIGHT;
             const background = backgrounds[squareY][squareX];
 
-            printStr(fullMapPNG, x, y, hex2(squareX) + hex2(squareY));
-            printStr(fullMapPNG, x, y + 6, hex2(background.squareSprite) + hex2(background.squareOrientation));
-            printStr(fullMapPNG, x, y + 12, hex2(gExile[X.background_sprite_lookup + background.squareSprite]));
+            printStr(fullMapPNG, x + 1, y + 1, hex2(squareX) + hex2(squareY));
+            printStr(fullMapPNG, x + 1, y + 7, hex2(background.squareSprite) + hex2(background.thisObjectSprite));
+            printStr(fullMapPNG, x + 1, y + 14, hex2(background.objectFlippingFlags));
+            // printStr(fullMapPNG, x, y + 6, hex2(background.squareSprite) + hex2(background.squareOrientation));
+            // printStr(fullMapPNG, x, y + 12, hex2(gExile[X.background_sprite_lookup + background.squareSprite]));
         }
     }
 
