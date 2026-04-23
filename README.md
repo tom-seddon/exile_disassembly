@@ -1,35 +1,32 @@
-* Exile disassembly
+# Exile disassembly
 
 Buildable copy of Exile.
 
 Based on the disassembly here: http://www.level7.org.uk/miscellany/exile-disassembly.txt
 
-Use BeebAsm to build it. Unfortunately Exile isn't really constructed
-in a BeebAsm-friendly way, so the build process is a bit Heath
-Robinson. But, if you manage to make it work, you should be rewarded
-with two files matching the originals:
+# To build
 
-=./tmp/exileb.new=, matching =$.EXILEB=, with SHA1: ede3f7bbe3bf6b001776ab53fbd7f8488c7489f1
+Tested on macOS. Ensure BeebAsm (`beebasm`), Python 2.7 (`python2`)
+and GNU Make (`make`) are available on the path.
 
-=./tmp/exilemc.new=, matching =$.EXILEMC=, with SHA1: 7768adb6154f064a0ee413dab92c63c31236fae7
+To build, type `make`.
 
-* To build
+The output will appear in a folder called `./tmp` in your working
+copy:
 
-With BeebAsm on OS X, just type =make=...
-
-The output will appear in a folder called =./tmp= in your working
-copy.
+- `./tmp/exileb.new`, matching `$.EXILEB`, with SHA1: ede3f7bbe3bf6b001776ab53fbd7f8488c7489f1
+- `./tmp/exilemc.new`, matching `$.EXILEMC`, with SHA1: 7768adb6154f064a0ee413dab92c63c31236fae7
 
 The build process can check that the build results match the BBC
-originals exactly. To this, extract =$.EXILEB= and =$.EXILEMC= from
-the STH Exile disc and save them in the working copy as =exileb.orig=
-and =exilemc.orig= respectively. The build will then fail if there's a
+originals exactly. To this, extract `$.EXILEB` and `$.EXILEMC` from
+the STH Exile disc and save them in the working copy as `exileb.orig`
+and `exilemc.orig` respectively. The build will then fail if there's a
 mismatch, and you'll get a hex dump diff.
 
 Haven't tried Linux or Windows but it shouldn't be too much effort to
 get it working...
 
-* Disassembly notes
+# Disassembly notes
 
 - A few equb values had to change here and there compared to the
   disassembly, because they weren't the same as the files on the STH
@@ -38,7 +35,7 @@ get it working...
 - I made a stab, hopefully not too incorrectly, at deriving a few
   constants
 
-- There's a lump of data in =exilemc_data.dat= that doesn't seem to
+- There's a lump of data in `exilemc_data.dat` that doesn't seem to
   have any obvious purpose - it doesn't look like code and nothing
   seems to use it
 
@@ -47,23 +44,23 @@ get it working...
   wrong places. I've cleaned up the worst bits, but there may still be
   some discrepancies
 
-* Tools
+# Tools
 
-** =$.EXSPRS2=
+## `$.EXSPRS2`
 
 Dependencies: shadow RAM/Tube (Tube recommended!)
 
 BBC BASIC program that draws the Exile sprites on screen. You'll need
-=$.EXILEB= from the Exile disc. 
+`$.EXILEB` from the Exile disc. 
 
-=exile_sprites.png= is the output.
+`exile_sprites.png` is the output.
 
-** =samples.py=
+## `samples.py`
 
 Dependencies: Python 2.7, sox
 
 Python program that extracts the sample data from the enhanced version
 and saves them as WAV files. Run from the tools folder; it expects to
-find =$.EXILESR= as =exilesr.orig= in the root of the working copy.
+find `$.EXILESR` as `exilesr.orig` in the root of the working copy.
 
-=0.wav= to =6.wav= is the output.
+`0.wav` to `6.wav` is the output.
