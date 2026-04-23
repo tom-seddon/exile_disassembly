@@ -64,3 +64,16 @@ and saves them as WAV files. Run from the tools folder; it expects to
 find `$.EXILESR` as `exilesr.orig` in the root of the working copy.
 
 `0.wav` to `6.wav` is the output.
+
+## `map`
+
+Dependencies: npm, node
+
+TypeScript program that produces a map of the Exile world.
+
+For one-time setup, do `npm install` from inside `tools/map`.
+
+To run, do `npm start` from inside `tools/map`.
+
+Output appears in `tools/map/output`: a bunch of PNGs. They look about
+right? - but I'm sure I decided at the time that they weren't.
