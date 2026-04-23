@@ -1,6 +1,7 @@
 BEEBASM:=beebasm
-DISKCONV:=python disk_conv.py
-DUMP:=python dump.py
+PYTHON:=python2
+DISKCONV:=$(PYTHON) "disk_conv.py"
+DUMP:=$(PYTHON) "dump.py"
 TMP:=./tmp
 MKDIR:=mkdir -p
 CAT:=cat
