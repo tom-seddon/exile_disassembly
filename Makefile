@@ -1,38 +1,42 @@
+ifeq ($(OS),Windows_NT)
+PYTHON:=py -3
+else
+PYTHON:=python3
+endif
+
+##########################################################################
+##########################################################################
+
+_V:=$(if $(VERBOSE),,@)
+__VERBOSE:=$(if $(VERBOSE),--verbose,)
+SHELLCMD:=$(PYTHON) "submodules/shellcmd.py/shellcmd.py"
 BEEBASM:=beebasm
-PYTHON:=python2
-DISKCONV:=$(PYTHON) "disk_conv.py"
-DUMP:=$(PYTHON) "dump.py"
+
+##########################################################################
+##########################################################################
+
 TMP:=./tmp
-MKDIR:=mkdir -p
-CAT:=cat
-SHA1:=openssl dgst -sha1
-DIFF:=diff --suppress-common-lines
 
-.PHONY:build_exile
-build_exile:
-	$(MKDIR) $(TMP)
+##########################################################################
+##########################################################################
 
-	$(BEEBASM) -v -i exileb.6502 -do $(TMP)/exileb.ssd >$(TMP)/exileb.lst
-	$(DISKCONV) --not-emacs $(TMP)/exileb.ssd
-	cd $(TMP)/exileb/0 && $(CAT) BMAIN BINTRO > ../../exileb.new
+.PHONY:build
+build:
+	$(_V)$(SHELLCMD) mkdir "$(TMP)"
+	$(_V)$(BEEBASM) -v -i "exileb.6502" -do "$(TMP)/exileb.ssd" >"$(TMP)/exileb.lst"
+	$(_V)$(PYTHON) "submodules/beeb/bin/ssd_extract.py" $(__VERBOSE) -o "$(TMP)" "$(TMP)/exileb.ssd"
+	$(_V)$(SHELLCMD) concat -o "$(TMP)/exileb.new" "$(TMP)/exileb/0/B.MAIN" "$(TMP)/exileb/0/B.INTRO"
 
-	$(BEEBASM) -v -i exilemc.6502 -do $(TMP)/exilemc.ssd >$(TMP)/exilemc.lst
-	$(DISKCONV) --not-emacs $(TMP)/exilemc.ssd
-	cd $(TMP)/exilemc/0 && $(CAT) SRAM SROM SINIT2 SINIT > ../../exilemc.new
+	$(_V)$(BEEBASM) -v -i "exilemc.6502" -do "$(TMP)/exilemc.ssd" > "$(TMP)/exilemc.lst"
+	$(_V)$(PYTHON) "submodules/beeb/bin/ssd_extract.py" $(__VERBOSE) -o "$(TMP)" "$(TMP)/exilemc.ssd"
+	$(_V)$(SHELLCMD) concat -o "$(TMP)/exilemc.new" "$(TMP)/exilemc/0/S.RAM" "$(TMP)/exilemc/0/S.ROM" "$(TMP)/exilemc/0/S.INIT2" "$(TMP)/exilemc/0/S.INIT"
 
+	$(_V)$(SHELLCMD) sha1 "$(TMP)/exileb.new"
+	$(_V)$(SHELLCMD) sha1 "$(TMP)/exilemc.new"
 
-	$(SHA1) $(TMP)/exileb.new
-ifneq ($(wildcard exileb.orig),)
-	$(SHA1) exileb.orig
-	$(DUMP) $(TMP)/exileb.new > $(TMP)/exileb.new.txt
-	$(DUMP) exileb.orig > $(TMP)/exileb.orig.txt
-	$(DIFF) $(TMP)/exileb.orig.txt $(TMP)/exileb.new.txt
-endif
+##########################################################################
+##########################################################################
 
-	$(SHA1) $(TMP)/exilemc.new
-ifneq ($(wildcard exilemc.orig),)
-	$(SHA1) exilemc.orig
-	$(DUMP) $(TMP)/exilemc.new > $(TMP)/exilemc.new.txt
-	$(DUMP) exilemc.orig > $(TMP)/exilemc.orig.txt
-	$(DIFF) $(TMP)/exilemc.orig.txt $(TMP)/exilemc.new.txt
-endif
+.PHONY:clean
+clean:
+	$(_V)$(SHELLCMD) rm-tree "$(TMP)"
