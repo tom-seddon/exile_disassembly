@@ -6,8 +6,29 @@ Based on the disassembly here: http://www.level7.org.uk/miscellany/exile-disasse
 
 # To build
 
-Tested on macOS. Ensure BeebAsm (`beebasm`), Python 2.7 (`python2`)
-and GNU Make (`make`) are available on the path.
+## Prerequisites
+
+- Python 3.x
+- BeebAsm
+- GNU Make (prebuilt Windows copy supplied in repo)
+
+## Clone the repo
+
+This repo has submodules. Clone it with `--recursive`:
+
+    git clone --recursive https://github.com/tom-seddon/exile_disassembly
+		
+Alternatively, if you already cloned it non-recursively, you can do
+the following from inside the working copy:
+
+    git submodule init
+    git submodule update
+
+(The source zip files that GitHub makes available are no good. The
+only supported way to build this project is to clone it from GitHub as
+above.)
+
+## Build
 
 To build, type `make`.
 
@@ -16,15 +37,6 @@ copy:
 
 - `./tmp/exileb.new`, matching `$.EXILEB`, with SHA1: ede3f7bbe3bf6b001776ab53fbd7f8488c7489f1
 - `./tmp/exilemc.new`, matching `$.EXILEMC`, with SHA1: 7768adb6154f064a0ee413dab92c63c31236fae7
-
-The build process can check that the build results match the BBC
-originals exactly. To this, extract `$.EXILEB` and `$.EXILEMC` from
-the STH Exile disc and save them in the working copy as `exileb.orig`
-and `exilemc.orig` respectively. The build will then fail if there's a
-mismatch, and you'll get a hex dump diff.
-
-Haven't tried Linux or Windows but it shouldn't be too much effort to
-get it working...
 
 # Disassembly notes
 
